@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Container,
@@ -9,235 +8,790 @@ import {
   Grid,
   Stack,
   Badge,
-  List,
-  ListItem,
+  Card,
+  Flex,
+  Input,
+  Textarea,
+  IconButton,
+  Dialog,
+  Field,
 } from "@chakra-ui/react";
 
+interface TrainingDay {
+  id: string;
+  name: string;
+  focus: string;
+  exercises: string[];
+  duration: number;
+}
+
+interface TrainingWeek {
+  id: string;
+  name: string;
+  description: string;
+  level: "Einsteiger" | "Fortgeschritten" | "Experte";
+  days: TrainingDay[];
+}
+
 const Trainingsplan = () => {
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [showNewWeekDialog, setShowNewWeekDialog] = useState(false);
+  const [showNewDayDialog, setShowNewDayDialog] = useState(false);
+  const [currentWeekId, setCurrentWeekId] = useState<string>("");
+  const [newWeekData, setNewWeekData] = useState({
+    name: "",
+    description: "",
+    level: "Einsteiger" as "Einsteiger" | "Fortgeschritten" | "Experte",
+  });
+  const [newDayData, setNewDayData] = useState({
+    name: "",
+    focus: "",
+    exercises: [""],
+    duration: 30,
+  });
+  const [editingExercise, setEditingExercise] = useState<{
+    dayId: string;
+    exerciseIndex: number;
+  } | null>(null);
 
-  const trainingsPläne = [
+  const [trainingWeeks, setTrainingWeeks] = useState<TrainingWeek[]>([
     {
-      id: "beginner",
-      name: "Einsteiger-Plan",
-      duration: "4 Wochen",
-      difficulty: "Leicht",
-      exercises: ["Kniebeugen", "Liegestütze", "Planks", "Lunges"],
-      description: "Perfekt für Fitness-Anfänger",
-      color: "green",
-    },
-    {
-      id: "intermediate",
-      name: "Fortgeschrittenen-Plan",
-      duration: "6 Wochen",
-      difficulty: "Mittel",
-      exercises: ["Burpees", "Mountain Climbers", "Deadlifts", "Pull-ups"],
-      description: "Für alle mit Grundkenntnissen",
-      color: "yellow",
-    },
-    {
-      id: "expert",
-      name: "Experten-Plan",
-      duration: "8 Wochen",
-      difficulty: "Schwer",
-      exercises: [
-        "Olympic Lifts",
-        "Muscle-ups",
-        "Pistol Squats",
-        "Handstand Push-ups",
+      id: "week1",
+      name: "Einsteiger Woche",
+      description: "Perfekt für den Einstieg ins Krafttraining",
+      level: "Einsteiger",
+      days: [
+        {
+          id: "day1",
+          name: "Tag 1",
+          focus: "Oberkörper",
+          exercises: [
+            "Liegestütze",
+            "Klimmzüge",
+            "Schulterdrücken",
+            "Bizeps Curls",
+          ],
+          duration: 45,
+        },
+        {
+          id: "day2",
+          name: "Tag 2",
+          focus: "Unterkörper",
+          exercises: ["Kniebeugen", "Lunges", "Wadenheben", "Glute Bridges"],
+          duration: 40,
+        },
+        {
+          id: "day3",
+          name: "Tag 3",
+          focus: "Ganzkörper",
+          exercises: [
+            "Burpees",
+            "Mountain Climbers",
+            "Planks",
+            "Jumping Jacks",
+          ],
+          duration: 35,
+        },
       ],
-      description: "Maximale Herausforderung",
-      color: "red",
     },
-  ];
+    {
+      id: "week2",
+      name: "Fortgeschrittene Woche",
+      description: "Intensiveres Training für mehr Kraft und Ausdauer",
+      level: "Fortgeschritten",
+      days: [
+        {
+          id: "day4",
+          name: "Tag 1",
+          focus: "Kraft Oberkörper",
+          exercises: ["Bankdrücken", "Rudern", "Dips", "Pull-ups"],
+          duration: 60,
+        },
+        {
+          id: "day5",
+          name: "Tag 2",
+          focus: "Kraft Unterkörper",
+          exercises: [
+            "Deadlifts",
+            "Bulgarian Split Squats",
+            "Hip Thrusts",
+            "Calf Raises",
+          ],
+          duration: 55,
+        },
+      ],
+    },
+  ]);
 
-  const tips = [
-    {
-      icon: "🔥",
-      title: "Aufwärmen",
-      description: "Beginne jedes Training mit 5-10 Minuten Aufwärmübungen",
-    },
-    {
-      icon: "💧",
-      title: "Hydration",
-      description:
-        "Trinke vor, während und nach dem Training ausreichend Wasser",
-    },
-    {
-      icon: "😴",
-      title: "Erholung",
-      description: "Gönne deinem Körper zwischen den Trainingseinheiten Ruhe",
-    },
-  ];
+  const addNewDay = (weekId: string) => {
+    setCurrentWeekId(weekId);
+    setNewDayData({
+      name: "",
+      focus: "",
+      exercises: [""],
+      duration: 30,
+    });
+    setShowNewDayDialog(true);
+  };
+
+  const createNewDay = () => {
+    const newDay: TrainingDay = {
+      id: `day${Date.now()}`,
+      name:
+        newDayData.name ||
+        `Tag ${
+          trainingWeeks.find((w) => w.id === currentWeekId)?.days.length! + 1
+        }`,
+      focus: newDayData.focus || "Ganzkörper",
+      exercises: newDayData.exercises.filter((ex) => ex.trim() !== ""),
+      duration: newDayData.duration,
+    };
+
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) =>
+        week.id === currentWeekId
+          ? { ...week, days: [...week.days, newDay] }
+          : week
+      )
+    );
+    setShowNewDayDialog(false);
+  };
+
+  const addNewWeek = () => {
+    setNewWeekData({
+      name: "",
+      description: "",
+      level: "Einsteiger",
+    });
+    setShowNewWeekDialog(true);
+  };
+
+  const createNewWeek = () => {
+    const newWeek: TrainingWeek = {
+      id: `week${Date.now()}`,
+      name: newWeekData.name || `Woche ${trainingWeeks.length + 1}`,
+      description: newWeekData.description || "Neue Trainingswoche",
+      level: newWeekData.level,
+      days: [],
+    };
+    setTrainingWeeks([...trainingWeeks, newWeek]);
+    setShowNewWeekDialog(false);
+  };
+
+  const addExercise = (dayId: string) => {
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) => ({
+        ...week,
+        days: week.days.map((day) =>
+          day.id === dayId
+            ? { ...day, exercises: [...day.exercises, "Neue Übung"] }
+            : day
+        ),
+      }))
+    );
+  };
+
+  const removeExercise = (dayId: string, exerciseIndex: number) => {
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) => ({
+        ...week,
+        days: week.days.map((day) =>
+          day.id === dayId
+            ? {
+                ...day,
+                exercises: day.exercises.filter(
+                  (_, index) => index !== exerciseIndex
+                ),
+              }
+            : day
+        ),
+      }))
+    );
+  };
+
+  const updateExercise = (
+    dayId: string,
+    exerciseIndex: number,
+    newValue: string
+  ) => {
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) => ({
+        ...week,
+        days: week.days.map((day) =>
+          day.id === dayId
+            ? {
+                ...day,
+                exercises: day.exercises.map((ex, index) =>
+                  index === exerciseIndex ? newValue : ex
+                ),
+              }
+            : day
+        ),
+      }))
+    );
+  };
+
+  const getDifficultyColor = (level: string) => {
+    switch (level) {
+      case "Einsteiger":
+        return "green";
+      case "Fortgeschritten":
+        return "yellow";
+      case "Experte":
+        return "red";
+      default:
+        return "gray";
+    }
+  };
 
   return (
     <Box py={8}>
-      <Container maxW="7xl">
-        {/* Page Header */}
+      <Container maxW="6xl">
         <Stack gap={4} textAlign="center" mb={12}>
           <Heading size="2xl" color="text.primary">
-            📋 Dein Trainingsplan
+            📋 Deine Trainingspläne
           </Heading>
           <Text fontSize="lg" color="text.secondary">
-            Wähle den perfekten Plan für deine Fitnessziele
+            Verwalte deine Trainingswochen und -tage
           </Text>
         </Stack>
 
-        {/* Training Plans Grid */}
-        <Grid
-          templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
-          gap={6}
-          mb={12}
-        >
-          {trainingsPläne.map((plan) => {
-            const isSelected = selectedPlan === plan.id;
-            return (
-              <Box
-                key={plan.id}
-                p={6}
-                bg="bg.secondary"
-                borderColor={isSelected ? "accent.primary" : "border"}
-                borderWidth="2px"
-                rounded="lg"
-                cursor="pointer"
-                transition="all 0.3s ease"
-                _hover={{
-                  transform: "translateY(-4px)",
-                  borderColor: "accent.primary",
-                }}
-                onClick={() => setSelectedPlan(plan.id)}
-              >
-                <Stack gap={4}>
-                  {/* Plan Header */}
-                  <Stack direction="row" justify="space-between" align="center">
-                    <Heading size="md" color="text.primary">
-                      {plan.name}
-                    </Heading>
-                    <Badge
-                      colorPalette={plan.color}
-                      variant="subtle"
-                      px={2}
-                      py={1}
-                    >
-                      {plan.difficulty}
-                    </Badge>
-                  </Stack>
+        <Flex justify="center" mb={8}>
+          <Button
+            onClick={addNewWeek}
+            bg="accent.primary"
+            color="white"
+            _hover={{ bg: "accent.secondary" }}
+            size="lg"
+            px={8}
+          >
+            ➕ Neue Trainingswoche hinzufügen
+          </Button>
+        </Flex>
 
-                  {/* Plan Info */}
+        <Stack gap={8}>
+          {trainingWeeks.map((week) => (
+            <Card.Root key={week.id} bg="bg.secondary" p={6}>
+              <Stack gap={6}>
+                <Flex justify="space-between" align="center">
                   <Stack gap={2}>
-                    <Text color="text.secondary" fontWeight="medium">
-                      ⏱️ {plan.duration}
-                    </Text>
-                    <Text color="text.secondary">{plan.description}</Text>
+                    <Flex align="center" gap={3}>
+                      <Heading size="lg" color="text.primary">
+                        {week.name}
+                      </Heading>
+                      <Badge
+                        colorPalette={getDifficultyColor(week.level)}
+                        variant="subtle"
+                      >
+                        {week.level}
+                      </Badge>
+                    </Flex>
+                    <Text color="text.secondary">{week.description}</Text>
                   </Stack>
+                  <Button
+                    onClick={() => addNewDay(week.id)}
+                    bg="accent.primary"
+                    color="white"
+                    _hover={{ bg: "accent.secondary" }}
+                    size="sm"
+                  >
+                    ➕ Tag hinzufügen
+                  </Button>
+                </Flex>
 
-                  {/* Exercises Preview */}
-                  <Box>
-                    <Text fontWeight="bold" color="text.primary" mb={2}>
-                      Übungen:
+                {week.days.length > 0 ? (
+                  <Grid
+                    templateColumns={{
+                      base: "1fr",
+                      md: "repeat(2, 1fr)",
+                      lg: "repeat(3, 1fr)",
+                    }}
+                    gap={4}
+                  >
+                    {week.days.map((day) => (
+                      <Card.Root
+                        key={day.id}
+                        bg="bg"
+                        borderColor={
+                          selectedDay === day.id ? "accent.primary" : "border"
+                        }
+                        borderWidth="2px"
+                        cursor="pointer"
+                        transition="all 0.3s ease"
+                        _hover={{
+                          borderColor: "accent.primary",
+                          transform: "translateY(-2px)",
+                          boxShadow: "lg",
+                        }}
+                        onClick={() =>
+                          setSelectedDay(selectedDay === day.id ? null : day.id)
+                        }
+                      >
+                        <Card.Body p={4}>
+                          <Stack gap={3}>
+                            <Flex justify="space-between" align="center">
+                              <Heading size="md" color="text.primary">
+                                {day.name}
+                              </Heading>
+                              <Text fontSize="sm" color="text.secondary">
+                                ⏱️ {day.duration}min
+                              </Text>
+                            </Flex>
+
+                            <Badge
+                              colorPalette="orange"
+                              variant="outline"
+                              alignSelf="flex-start"
+                            >
+                              {day.focus}
+                            </Badge>
+
+                            <Box>
+                              <Flex
+                                justify="space-between"
+                                align="center"
+                                mb={2}
+                              >
+                                <Text
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                  color="text.primary"
+                                >
+                                  Übungen:
+                                </Text>
+                                <Button
+                                  size="xs"
+                                  bg="accent.primary"
+                                  color="white"
+                                  _hover={{ bg: "accent.secondary" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addExercise(day.id);
+                                  }}
+                                >
+                                  ➕
+                                </Button>
+                              </Flex>
+                              <Stack gap={1}>
+                                {day.exercises.map((exercise, index) => (
+                                  <Flex key={index} align="center" gap={2}>
+                                    {editingExercise?.dayId === day.id &&
+                                    editingExercise?.exerciseIndex === index ? (
+                                      <Input
+                                        size="sm"
+                                        value={exercise}
+                                        onChange={(e) =>
+                                          updateExercise(
+                                            day.id,
+                                            index,
+                                            e.target.value
+                                          )
+                                        }
+                                        onBlur={() => setEditingExercise(null)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            setEditingExercise(null);
+                                          }
+                                        }}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <>
+                                        <Text
+                                          fontSize="sm"
+                                          color="text.secondary"
+                                          flex="1"
+                                          cursor="pointer"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingExercise({
+                                              dayId: day.id,
+                                              exerciseIndex: index,
+                                            });
+                                          }}
+                                        >
+                                          • {exercise}
+                                        </Text>
+                                        <Button
+                                          size="xs"
+                                          bg="red.500"
+                                          color="white"
+                                          _hover={{ bg: "red.600" }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeExercise(day.id, index);
+                                          }}
+                                        >
+                                          ✕
+                                        </Button>
+                                      </>
+                                    )}
+                                  </Flex>
+                                ))}
+                              </Stack>
+                            </Box>
+
+                            <Button
+                              bg="accent.primary"
+                              color="white"
+                              _hover={{ bg: "accent.secondary" }}
+                              size="sm"
+                              mt={2}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = "/live-workout";
+                              }}
+                            >
+                              🏃‍♂️ Training starten
+                            </Button>
+                          </Stack>
+                        </Card.Body>
+                      </Card.Root>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Box
+                    textAlign="center"
+                    py={8}
+                    border="2px dashed"
+                    borderColor="border"
+                    borderRadius="lg"
+                    bg="bg.tertiary"
+                  >
+                    <Text color="text.secondary" fontSize="lg">
+                      Keine Trainingstage vorhanden
                     </Text>
-                    <List.Root>
-                      {plan.exercises.map((exercise, index) => (
-                        <ListItem key={index} color="text.secondary">
-                          • {exercise}
-                        </ListItem>
-                      ))}
-                    </List.Root>
+                    <Text color="text.secondary" fontSize="sm" mt={2}>
+                      Klicke auf "Tag hinzufügen" um zu beginnen
+                    </Text>
+                  </Box>
+                )}
+              </Stack>
+            </Card.Root>
+          ))}
+        </Stack>
+
+        <Box mt={12} p={6} bg="bg.secondary" borderRadius="lg">
+          <Heading size="md" color="text.primary" mb={4} textAlign="center">
+            💡 Trainingstipps
+          </Heading>
+          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
+            <Box textAlign="center" p={4} bg="bg.tertiary" borderRadius="md">
+              <Text fontSize="2xl" mb={2}>
+                🔥
+              </Text>
+              <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={1}>
+                Aufwärmen
+              </Text>
+              <Text fontSize="xs" color="text.secondary">
+                Beginne jedes Training mit 5-10 Minuten Aufwärmübungen
+              </Text>
+            </Box>
+            <Box textAlign="center" p={4} bg="bg.tertiary" borderRadius="md">
+              <Text fontSize="2xl" mb={2}>
+                💧
+              </Text>
+              <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={1}>
+                Hydration
+              </Text>
+              <Text fontSize="xs" color="text.secondary">
+                Trinke vor, während und nach dem Training ausreichend Wasser
+              </Text>
+            </Box>
+            <Box textAlign="center" p={4} bg="bg.tertiary" borderRadius="md">
+              <Text fontSize="2xl" mb={2}>
+                😴
+              </Text>
+              <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={1}>
+                Erholung
+              </Text>
+              <Text fontSize="xs" color="text.secondary">
+                Gönne deinem Körper zwischen den Trainingseinheiten Ruhe
+              </Text>
+            </Box>
+          </Grid>
+        </Box>
+
+        {/* Dialog für neue Trainingswoche */}
+        {showNewWeekDialog && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            right="0"
+            bottom="0"
+            bg="blackAlpha.600"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="1000"
+          >
+            <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
+              <Stack gap={4}>
+                <Heading size="md" color="text.primary">
+                  Neue Trainingswoche erstellen
+                </Heading>
+
+                <Stack gap={3}>
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Name der Woche:
+                    </Text>
+                    <Input
+                      value={newWeekData.name}
+                      onChange={(e) =>
+                        setNewWeekData({ ...newWeekData, name: e.target.value })
+                      }
+                      placeholder="z.B. Kraft Woche 1"
+                    />
                   </Box>
 
-                  {/* Select Button */}
-                  <Button
-                    bg={isSelected ? "accent.primary" : "bg.tertiary"}
-                    color={isSelected ? "white" : "text.primary"}
-                    _hover={{
-                      bg: isSelected ? "accent.secondary" : "accent.primary",
-                      color: "white",
-                    }}
-                    size="md"
-                    fontWeight="bold"
-                  >
-                    {isSelected ? "✓ Ausgewählt" : "Plan wählen"}
-                  </Button>
-                </Stack>
-              </Box>
-            );
-          })}
-        </Grid>
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Beschreibung:
+                    </Text>
+                    <Textarea
+                      value={newWeekData.description}
+                      onChange={(e) =>
+                        setNewWeekData({
+                          ...newWeekData,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Beschreibung der Trainingswoche..."
+                    />
+                  </Box>
 
-        {/* Action Section */}
-        {selectedPlan && (
-          <Box
-            p={8}
-            bg="bg.secondary"
-            rounded="lg"
-            borderColor="accent.primary"
-            borderWidth="1px"
-            textAlign="center"
-            mb={12}
-          >
-            <Stack gap={6}>
-              <Heading size="lg" color="text.primary">
-                Bereit zu starten?
-              </Heading>
-              <Stack
-                direction={{ base: "column", sm: "row" }}
-                gap={4}
-                justify="center"
-              >
-                <Button
-                  asChild
-                  size="lg"
-                  bg="accent.primary"
-                  color="white"
-                  _hover={{ bg: "accent.secondary" }}
-                  px={8}
-                >
-                  <RouterLink to="/live-workout">🏃‍♂️ Workout starten</RouterLink>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  borderColor="accent.primary"
-                  color="accent.primary"
-                  _hover={{ bg: "accent.primary", color: "white" }}
-                  px={8}
-                >
-                  ⚙️ Plan anpassen
-                </Button>
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Schwierigkeitslevel:
+                    </Text>
+                    <select
+                      value={newWeekData.level}
+                      onChange={(e) =>
+                        setNewWeekData({
+                          ...newWeekData,
+                          level: e.target.value as any,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      <option value="Einsteiger">Einsteiger</option>
+                      <option value="Fortgeschritten">Fortgeschritten</option>
+                      <option value="Experte">Experte</option>
+                    </select>
+                  </Box>
+                </Stack>
+
+                <Flex gap={3} justify="end">
+                  <Button
+                    onClick={() => setShowNewWeekDialog(false)}
+                    bg="gray.500"
+                    color="white"
+                    _hover={{ bg: "gray.600" }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button
+                    onClick={createNewWeek}
+                    bg="accent.primary"
+                    color="white"
+                    _hover={{ bg: "accent.secondary" }}
+                  >
+                    Erstellen
+                  </Button>
+                </Flex>
               </Stack>
-            </Stack>
+            </Box>
           </Box>
         )}
 
-        {/* Tips Section */}
-        <Box>
-          <Heading size="lg" color="text.primary" mb={6} textAlign="center">
-            💡 Trainingstipps
-          </Heading>
-          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={6}>
-            {tips.map((tip, index) => (
-              <Box
-                key={index}
-                p={6}
-                bg="bg.secondary"
-                borderColor="border"
-                borderWidth="1px"
-                rounded="lg"
-                textAlign="center"
-              >
+        {/* Dialog für neuen Trainingstag */}
+        {showNewDayDialog && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            right="0"
+            bottom="0"
+            bg="blackAlpha.600"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="1000"
+          >
+            <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
+              <Stack gap={4}>
+                <Heading size="md" color="text.primary">
+                  Neuen Trainingstag erstellen
+                </Heading>
+
                 <Stack gap={3}>
-                  <Text fontSize="2xl">{tip.icon}</Text>
-                  <Heading size="sm" color="text.primary">
-                    {tip.title}
-                  </Heading>
-                  <Text color="text.secondary" fontSize="sm">
-                    {tip.description}
-                  </Text>
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Name des Trainingstags:
+                    </Text>
+                    <Input
+                      value={newDayData.name}
+                      onChange={(e) =>
+                        setNewDayData({ ...newDayData, name: e.target.value })
+                      }
+                      placeholder="z.B. Oberkörper Power"
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Trainings-Fokus:
+                    </Text>
+                    <Input
+                      value={newDayData.focus}
+                      onChange={(e) =>
+                        setNewDayData({ ...newDayData, focus: e.target.value })
+                      }
+                      placeholder="z.B. Oberkörper, Unterkörper, Cardio..."
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Dauer (Minuten):
+                    </Text>
+                    <Input
+                      type="number"
+                      value={newDayData.duration}
+                      onChange={(e) =>
+                        setNewDayData({
+                          ...newDayData,
+                          duration: parseInt(e.target.value) || 30,
+                        })
+                      }
+                      min="10"
+                      max="120"
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Übungen:
+                    </Text>
+                    <Stack gap={2}>
+                      {newDayData.exercises.map((exercise, index) => (
+                        <Flex key={index} gap={2} align="center">
+                          <Input
+                            value={exercise}
+                            onChange={(e) => {
+                              const newExercises = [...newDayData.exercises];
+                              newExercises[index] = e.target.value;
+                              setNewDayData({
+                                ...newDayData,
+                                exercises: newExercises,
+                              });
+                            }}
+                            placeholder="Übung eingeben..."
+                          />
+                          {newDayData.exercises.length > 1 && (
+                            <Button
+                              size="sm"
+                              bg="red.500"
+                              color="white"
+                              _hover={{ bg: "red.600" }}
+                              onClick={() => {
+                                const newExercises =
+                                  newDayData.exercises.filter(
+                                    (_, i) => i !== index
+                                  );
+                                setNewDayData({
+                                  ...newDayData,
+                                  exercises: newExercises,
+                                });
+                              }}
+                            >
+                              ✕
+                            </Button>
+                          )}
+                        </Flex>
+                      ))}
+                      <Button
+                        size="sm"
+                        bg="accent.primary"
+                        color="white"
+                        _hover={{ bg: "accent.secondary" }}
+                        onClick={() => {
+                          setNewDayData({
+                            ...newDayData,
+                            exercises: [...newDayData.exercises, ""],
+                          });
+                        }}
+                      >
+                        ➕ Übung hinzufügen
+                      </Button>
+                    </Stack>
+                  </Box>
                 </Stack>
-              </Box>
-            ))}
-          </Grid>
-        </Box>
+
+                <Flex gap={3} justify="end">
+                  <Button
+                    onClick={() => setShowNewDayDialog(false)}
+                    bg="gray.500"
+                    color="white"
+                    _hover={{ bg: "gray.600" }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button
+                    onClick={createNewDay}
+                    bg="accent.primary"
+                    color="white"
+                    _hover={{ bg: "accent.secondary" }}
+                  >
+                    Erstellen
+                  </Button>
+                </Flex>
+              </Stack>
+            </Box>
+          </Box>
+        )}
       </Container>
     </Box>
   );
