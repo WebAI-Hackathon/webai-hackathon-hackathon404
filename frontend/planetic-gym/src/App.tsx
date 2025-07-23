@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "./App.css";
+import { Box } from "@chakra-ui/react";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import Trainingsplan from "./pages/Trainingsplan";
@@ -13,20 +13,20 @@ function App() {
 
   return (
     <Router>
-      <div className="app">
+      <Box minH="100vh" bg="bg">
         <Header />
         {showWelcomePopup && (
           <WelcomePopup onClose={() => setShowWelcomePopup(false)} />
         )}
-        <main className="main-content">
+        <Box as="main" pt="80px">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/trainingsplan" element={<Trainingsplan />} />
             <Route path="/live-workout" element={<LiveWorkout />} />
             <Route path="/statistiken" element={<Statistiken />} />
           </Routes>
-        </main>
-      </div>
+        </Box>
+      </Box>
     </Router>
   );
 }

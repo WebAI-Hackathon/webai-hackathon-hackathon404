@@ -1,73 +1,188 @@
-import { Link } from "react-router-dom";
-import "./Home.css";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Button,
+  Stack,
+  Grid,
+} from "@chakra-ui/react";
 
 const Home = () => {
+  const features = [
+    {
+      icon: "📋",
+      title: "Personalisierte Trainingspläne",
+      description:
+        "Individuelle Pläne, die sich an deine Ziele und dein Fitnesslevel anpassen",
+    },
+    {
+      icon: "🏃‍♂️",
+      title: "Live Workouts",
+      description:
+        "Trainiere in Echtzeit mit unserer interaktiven Workout-Führung",
+    },
+    {
+      icon: "📊",
+      title: "Detaillierte Statistiken",
+      description:
+        "Verfolge deinen Fortschritt und erkenne deine Verbesserungen",
+    },
+  ];
+
+  const stats = [
+    { number: "12", label: "Workouts absolviert" },
+    { number: "5.2kg", label: "Gewicht verloren" },
+    { number: "28", label: "Trainingstage" },
+  ];
+
   return (
-    <div className="home">
-      <section className="hero">
-        <div className="hero-content">
-          <h1>Willkommen bei Planetic Gym</h1>
-          <p>
-            Deine persönliche Fitness-Plattform für optimale Trainingsergebnisse
-          </p>
-          <div className="hero-buttons">
-            <Link to="/trainingsplan" className="cta-button primary">
-              Trainingsplan starten
-            </Link>
-            <Link to="/live-workout" className="cta-button secondary">
-              Live Workout
-            </Link>
-          </div>
-        </div>
-      </section>
+    <Box>
+      {/* Hero Section */}
+      <Box
+        py={{ base: 20, md: 32 }}
+        bgGradient="linear(to-br, bg.secondary, bg.tertiary)"
+        position="relative"
+        overflow="hidden"
+      >
+        <Container maxW="7xl">
+          <Stack gap={8} textAlign="center" maxW="4xl" mx="auto">
+            <Heading
+              as="h1"
+              size="3xl"
+              fontWeight="bold"
+              color="text.primary"
+              lineHeight="1.2"
+            >
+              Willkommen bei{" "}
+              <Text as="span" color="accent.primary">
+                Planetic Gym
+              </Text>
+            </Heading>
 
-      <section className="features">
-        <div className="features-container">
-          <h2>Warum Planetic Gym?</h2>
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">📋</div>
-              <h3>Personalisierte Trainingspläne</h3>
-              <p>
-                Individuelle Pläne, die sich an deine Ziele und dein
-                Fitnesslevel anpassen
-              </p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">🏃‍♂️</div>
-              <h3>Live Workouts</h3>
-              <p>
-                Trainiere in Echtzeit mit unserer interaktiven Workout-Führung
-              </p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">📊</div>
-              <h3>Detaillierte Statistiken</h3>
-              <p>
-                Verfolge deinen Fortschritt und erkenne deine Verbesserungen
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+            <Text
+              fontSize="xl"
+              color="text.secondary"
+              maxW="2xl"
+              lineHeight="1.6"
+              mx="auto"
+            >
+              Deine persönliche Fitness-Plattform für optimale
+              Trainingsergebnisse
+            </Text>
 
-      <section className="quick-stats">
-        <div className="stats-container">
-          <div className="stat-item">
-            <span className="stat-number">12</span>
-            <span className="stat-label">Workouts absolviert</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">5.2kg</span>
-            <span className="stat-label">Gewicht verloren</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">28</span>
-            <span className="stat-label">Trainingstage</span>
-          </div>
-        </div>
-      </section>
-    </div>
+            <Stack
+              direction={{ base: "column", sm: "row" }}
+              gap={4}
+              justify="center"
+            >
+              <Button
+                asChild
+                size="lg"
+                bg="accent.primary"
+                color="white"
+                _hover={{ bg: "accent.secondary" }}
+                px={8}
+                py={6}
+                fontSize="lg"
+                fontWeight="bold"
+              >
+                <RouterLink to="/trainingsplan">
+                  Trainingsplan starten
+                </RouterLink>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                borderColor="accent.primary"
+                color="accent.primary"
+                _hover={{ bg: "accent.primary", color: "white" }}
+                px={8}
+                py={6}
+                fontSize="lg"
+              >
+                <RouterLink to="/live-workout">Live Workout</RouterLink>
+              </Button>
+            </Stack>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* Features Section */}
+      <Box py={20} bg="bg">
+        <Container maxW="7xl">
+          <Stack gap={16}>
+            <Stack gap={4} textAlign="center">
+              <Heading size="2xl" color="text.primary">
+                Warum Planetic Gym?
+              </Heading>
+            </Stack>
+
+            <Grid
+              templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
+              gap={8}
+              w="full"
+            >
+              {features.map((feature, index) => (
+                <Box
+                  key={index}
+                  p={8}
+                  bg="bg.secondary"
+                  borderColor="border"
+                  borderWidth="1px"
+                  rounded="lg"
+                  _hover={{
+                    transform: "translateY(-4px)",
+                    borderColor: "accent.primary",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <Stack gap={4} textAlign="center">
+                    <Text fontSize="4xl">{feature.icon}</Text>
+                    <Heading size="md" color="text.primary">
+                      {feature.title}
+                    </Heading>
+                    <Text color="text.secondary" lineHeight="1.6">
+                      {feature.description}
+                    </Text>
+                  </Stack>
+                </Box>
+              ))}
+            </Grid>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* Quick Stats Section */}
+      <Box py={20} bg="bg.secondary">
+        <Container maxW="7xl">
+          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={8}>
+            {stats.map((stat, index) => (
+              <Box
+                key={index}
+                p={8}
+                bg="bg.tertiary"
+                borderColor="border"
+                borderWidth="1px"
+                rounded="lg"
+                textAlign="center"
+              >
+                <Stack gap={2}>
+                  <Text fontSize="4xl" fontWeight="bold" color="accent.primary">
+                    {stat.number}
+                  </Text>
+                  <Text color="text.secondary" fontSize="lg">
+                    {stat.label}
+                  </Text>
+                </Stack>
+              </Box>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 

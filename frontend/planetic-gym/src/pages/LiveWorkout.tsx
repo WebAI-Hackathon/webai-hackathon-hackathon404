@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import "./LiveWorkout.css";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Button,
+  Grid,
+  Stack,
+  Progress,
+  Badge,
+} from "@chakra-ui/react";
 
 const LiveWorkout = () => {
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
@@ -59,112 +69,236 @@ const LiveWorkout = () => {
       .padStart(2, "0")}`;
   };
 
+  const progressPercentage = (currentExercise / exercises.length) * 100;
+
   return (
-    <div className="live-workout">
-      <div className="workout-header">
-        <h1>🏃‍♂️ Live Workout</h1>
-        <p>Folge dem Timer und gib dein Bestes!</p>
-      </div>
+    <Box py={8}>
+      <Container maxW="6xl">
+        {/* Workout Header */}
+        <Stack gap={4} textAlign="center" mb={12}>
+          <Heading size="2xl" color="text.primary">
+            🏃‍♂️ Live Workout
+          </Heading>
+          <Text fontSize="lg" color="text.secondary">
+            Folge dem Timer und gib dein Bestes!
+          </Text>
+        </Stack>
 
-      <div className="workout-container">
-        <div className="workout-display">
-          <div className="current-exercise">
-            <h2>{exercises[currentExercise]?.name || "Bereit?"}</h2>
-            <div className="exercise-number">
-              {currentExercise + 1} / {exercises.length}
-            </div>
-          </div>
-
-          <div className="timer-display">
-            <div
-              className={`timer ${
-                timer <= 10 && isWorkoutActive ? "warning" : ""
-              }`}
+        <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={8}>
+          {/* Main Workout Display */}
+          <Box>
+            {/* Current Exercise */}
+            <Box
+              p={8}
+              bg="bg.secondary"
+              borderColor="accent.primary"
+              borderWidth="2px"
+              rounded="lg"
+              textAlign="center"
+              mb={6}
             >
-              {formatTime(timer)}
-            </div>
-            <div className="timer-label">
-              {isWorkoutActive ? "Verbleibende Zeit" : "Bereit zum Start"}
-            </div>
-          </div>
+              <Stack gap={6}>
+                <Stack gap={2}>
+                  <Heading size="xl" color="text.primary">
+                    {exercises[currentExercise]?.name || "Bereit?"}
+                  </Heading>
+                  <Badge colorPalette="orange" variant="subtle" px={3} py={1}>
+                    {currentExercise + 1} / {exercises.length}
+                  </Badge>
+                </Stack>
 
-          <div className="workout-controls">
-            {!isWorkoutActive ? (
-              <button className="start-btn" onClick={startWorkout}>
-                ▶️ Workout starten
-              </button>
-            ) : (
-              <div className="control-buttons">
-                <button className="pause-btn" onClick={pauseWorkout}>
-                  ⏸️ Pause
-                </button>
-                <button className="stop-btn" onClick={stopWorkout}>
-                  ⏹️ Stop
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+                {/* Timer Display */}
+                <Box>
+                  <Text
+                    fontSize="6xl"
+                    fontWeight="bold"
+                    color={
+                      timer <= 10 && isWorkoutActive
+                        ? "red.400"
+                        : "accent.primary"
+                    }
+                    fontFamily="mono"
+                  >
+                    {formatTime(timer)}
+                  </Text>
+                  <Text color="text.secondary" fontSize="lg">
+                    {isWorkoutActive ? "Verbleibende Zeit" : "Bereit zum Start"}
+                  </Text>
+                </Box>
 
-        <div className="workout-progress">
-          <h3>Workout Fortschritt</h3>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${(currentExercise / exercises.length) * 100}%`,
-              }}
-            ></div>
-          </div>
-          <div className="sets-counter">
-            <span>Absolvierte Sets: {sets}</span>
-          </div>
-        </div>
+                {/* Workout Controls */}
+                <Stack direction="row" gap={4} justify="center">
+                  {!isWorkoutActive ? (
+                    <Button
+                      size="lg"
+                      bg="accent.primary"
+                      color="white"
+                      _hover={{ bg: "accent.secondary" }}
+                      px={8}
+                      py={6}
+                      fontSize="lg"
+                      fontWeight="bold"
+                      onClick={startWorkout}
+                    >
+                      ▶️ Workout starten
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        size="lg"
+                        bg="yellow.500"
+                        color="white"
+                        _hover={{ bg: "yellow.600" }}
+                        px={6}
+                        onClick={pauseWorkout}
+                      >
+                        ⏸️ Pause
+                      </Button>
+                      <Button
+                        size="lg"
+                        bg="red.500"
+                        color="white"
+                        _hover={{ bg: "red.600" }}
+                        px={6}
+                        onClick={stopWorkout}
+                      >
+                        ⏹️ Stop
+                      </Button>
+                    </>
+                  )}
+                </Stack>
+              </Stack>
+            </Box>
 
-        <div className="exercises-list">
-          <h3>Heutige Übungen</h3>
-          <div className="exercises-grid">
-            {exercises.map((exercise, index) => (
-              <div
-                key={index}
-                className={`exercise-card ${
-                  index === currentExercise ? "active" : ""
-                } ${index < currentExercise ? "completed" : ""}`}
-              >
-                <div className="exercise-info">
-                  <span className="exercise-name">{exercise.name}</span>
-                  <span className="exercise-duration">
-                    {exercise.duration}s
-                  </span>
-                </div>
-                <div className="exercise-status">
-                  {index < currentExercise
-                    ? "✅"
-                    : index === currentExercise
-                    ? "🔥"
-                    : "⏳"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+            {/* Workout Progress */}
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+              mb={6}
+            >
+              <Stack gap={4}>
+                <Heading size="md" color="text.primary">
+                  Workout Fortschritt
+                </Heading>
+                <Progress.Root
+                  value={progressPercentage}
+                  size="lg"
+                  colorPalette="orange"
+                >
+                  <Progress.Track bg="bg.tertiary">
+                    <Progress.Range bg="accent.primary" />
+                  </Progress.Track>
+                </Progress.Root>
+                <Text color="text.secondary" textAlign="center">
+                  Absolvierte Sets: {sets}
+                </Text>
+              </Stack>
+            </Box>
+          </Box>
 
-        <div className="workout-stats">
-          <div className="stat-card">
-            <div className="stat-value">💪</div>
-            <div className="stat-label">Energie Level</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">🔥</div>
-            <div className="stat-label">Kalorien</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">⏱️</div>
-            <div className="stat-label">Zeit aktiv</div>
-          </div>
-        </div>
-      </div>
-    </div>
+          {/* Sidebar */}
+          <Stack gap={6}>
+            {/* Exercises List */}
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+            >
+              <Heading size="md" color="text.primary" mb={4}>
+                Heutige Übungen
+              </Heading>
+              <Stack gap={3}>
+                {exercises.map((exercise, index) => {
+                  const isActive = index === currentExercise;
+                  const isCompleted = index < currentExercise;
+
+                  return (
+                    <Box
+                      key={index}
+                      p={4}
+                      bg={
+                        isActive
+                          ? "accent.primary"
+                          : isCompleted
+                          ? "bg.tertiary"
+                          : "bg"
+                      }
+                      borderColor={isActive ? "accent.primary" : "border"}
+                      borderWidth="1px"
+                      rounded="md"
+                      transition="all 0.3s ease"
+                    >
+                      <Stack
+                        direction="row"
+                        justify="space-between"
+                        align="center"
+                      >
+                        <Stack gap={1}>
+                          <Text
+                            fontWeight="bold"
+                            color={isActive ? "white" : "text.primary"}
+                            fontSize="sm"
+                          >
+                            {exercise.name}
+                          </Text>
+                          <Text
+                            color={isActive ? "white" : "text.secondary"}
+                            fontSize="xs"
+                          >
+                            {exercise.duration}s
+                          </Text>
+                        </Stack>
+                        <Text fontSize="lg">
+                          {isCompleted ? "✅" : isActive ? "🔥" : "⏳"}
+                        </Text>
+                      </Stack>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
+
+            {/* Workout Stats */}
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+            >
+              <Heading size="md" color="text.primary" mb={4}>
+                Statistiken
+              </Heading>
+              <Grid templateColumns="1fr" gap={4}>
+                <Box textAlign="center" p={4} bg="bg.tertiary" rounded="md">
+                  <Text fontSize="2xl">💪</Text>
+                  <Text fontSize="sm" color="text.secondary">
+                    Energie Level
+                  </Text>
+                </Box>
+                <Box textAlign="center" p={4} bg="bg.tertiary" rounded="md">
+                  <Text fontSize="2xl">🔥</Text>
+                  <Text fontSize="sm" color="text.secondary">
+                    Kalorien
+                  </Text>
+                </Box>
+                <Box textAlign="center" p={4} bg="bg.tertiary" rounded="md">
+                  <Text fontSize="2xl">⏱️</Text>
+                  <Text fontSize="sm" color="text.secondary">
+                    Zeit aktiv
+                  </Text>
+                </Box>
+              </Grid>
+            </Box>
+          </Stack>
+        </Grid>
+      </Container>
+    </Box>
   );
 };
 

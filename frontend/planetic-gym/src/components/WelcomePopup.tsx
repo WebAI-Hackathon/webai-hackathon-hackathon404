@@ -1,5 +1,16 @@
 import { useEffect } from "react";
-import "./WelcomePopup.css";
+import {
+  DialogRoot,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogTitle,
+  DialogCloseTrigger,
+  Button,
+  Text,
+  Stack,
+} from "@chakra-ui/react";
 
 interface WelcomePopupProps {
   onClose: () => void;
@@ -16,25 +27,51 @@ const WelcomePopup = ({ onClose }: WelcomePopupProps) => {
   }, [onClose]);
 
   return (
-    <div className="popup-overlay" onClick={onClose}>
-      <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-        <div className="popup-header">
-          <h2>🎉 Welcome Back!</h2>
-          <button className="close-button" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className="popup-body">
-          <p>Bereit für dein nächstes Workout?</p>
-          <p>Lass uns gemeinsam deine Fitnessziele erreichen! 💪</p>
-        </div>
-        <div className="popup-footer">
-          <button className="start-button" onClick={onClose}>
+    <DialogRoot open={true} onOpenChange={() => onClose()}>
+      <DialogContent
+        bg="bg.secondary"
+        borderColor="border"
+        borderWidth="1px"
+        maxW="md"
+        mx={4}
+      >
+        <DialogHeader textAlign="center">
+          <DialogTitle color="text.primary" fontSize="2xl" fontWeight="bold">
+            🎉 Welcome Back!
+          </DialogTitle>
+          <DialogCloseTrigger
+            position="absolute"
+            top={4}
+            right={4}
+            color="text.secondary"
+          />
+        </DialogHeader>
+
+        <DialogBody>
+          <Stack gap={4} textAlign="center">
+            <Text color="text.primary" fontSize="lg">
+              Bereit für dein nächstes Workout?
+            </Text>
+            <Text color="text.secondary">
+              Lass uns gemeinsam deine Fitnessziele erreichen! 💪
+            </Text>
+          </Stack>
+        </DialogBody>
+
+        <DialogFooter justifyContent="center">
+          <Button
+            bg="accent.primary"
+            color="white"
+            _hover={{ bg: "accent.secondary" }}
+            size="lg"
+            fontWeight="bold"
+            onClick={onClose}
+          >
             Los geht's! 🚀
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </DialogRoot>
   );
 };
 

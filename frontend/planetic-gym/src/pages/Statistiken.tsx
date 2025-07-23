@@ -1,5 +1,15 @@
 import { useState } from "react";
-import "./Statistiken.css";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Button,
+  Grid,
+  Stack,
+  Progress,
+  Badge,
+} from "@chakra-ui/react";
 
 const Statistiken = () => {
   const [timeRange, setTimeRange] = useState("week");
@@ -39,180 +49,340 @@ const Statistiken = () => {
     { name: "Workout-Streak", current: 7, target: 10, achieved: false },
   ];
 
+  const achievements = [
+    {
+      icon: "🔥",
+      title: "Feuer & Flamme",
+      description: "5 Workouts in einer Woche",
+      earned: true,
+    },
+    {
+      icon: "💪",
+      title: "Kraft-Krieger",
+      description: "10 Kraft-Workouts absolviert",
+      earned: true,
+    },
+    {
+      icon: "⚡",
+      title: "Streak Master",
+      description: "30 Tage in Folge trainiert",
+      earned: false,
+    },
+    {
+      icon: "🎯",
+      title: "Ziel-Erreicher",
+      description: "Alle monatlichen Ziele erreicht",
+      earned: false,
+    },
+  ];
+
+  const insights = [
+    {
+      title: "📈 Beste Performance",
+      description: "Deine besten Workouts finden meist am Morgen statt!",
+    },
+    {
+      title: "🏃‍♂️ Lieblings-Workout",
+      description:
+        "Du bevorzugst Ganzkörper-Workouts - super für allgemeine Fitness!",
+    },
+    {
+      title: "📊 Fortschritt",
+      description:
+        "Deine Ausdauer hat sich in den letzten 4 Wochen um 15% verbessert!",
+    },
+  ];
+
   return (
-    <div className="statistiken">
-      <div className="stats-header">
-        <h1>📊 Deine Statistiken</h1>
-        <p>Verfolge deinen Fortschritt und erreiche deine Ziele</p>
-      </div>
+    <Box py={8}>
+      <Container maxW="7xl">
+        {/* Stats Header */}
+        <Stack gap={4} textAlign="center" mb={12}>
+          <Heading size="2xl" color="text.primary">
+            📊 Deine Statistiken
+          </Heading>
+          <Text fontSize="lg" color="text.secondary">
+            Verfolge deinen Fortschritt und erreiche deine Ziele
+          </Text>
+        </Stack>
 
-      <div className="time-range-selector">
-        <button
-          className={`range-btn ${timeRange === "week" ? "active" : ""}`}
-          onClick={() => setTimeRange("week")}
-        >
-          Diese Woche
-        </button>
-        <button
-          className={`range-btn ${timeRange === "month" ? "active" : ""}`}
-          onClick={() => setTimeRange("month")}
-        >
-          Dieser Monat
-        </button>
-      </div>
+        {/* Time Range Selector */}
+        <Stack direction="row" gap={2} justify="center" mb={8}>
+          <Button
+            variant={timeRange === "week" ? "solid" : "outline"}
+            bg={timeRange === "week" ? "accent.primary" : "transparent"}
+            color={timeRange === "week" ? "white" : "text.primary"}
+            borderColor="accent.primary"
+            _hover={{
+              bg: timeRange === "week" ? "accent.secondary" : "accent.primary",
+              color: "white",
+            }}
+            onClick={() => setTimeRange("week")}
+          >
+            Diese Woche
+          </Button>
+          <Button
+            variant={timeRange === "month" ? "solid" : "outline"}
+            bg={timeRange === "month" ? "accent.primary" : "transparent"}
+            color={timeRange === "month" ? "white" : "text.primary"}
+            borderColor="accent.primary"
+            _hover={{
+              bg: timeRange === "month" ? "accent.secondary" : "accent.primary",
+              color: "white",
+            }}
+            onClick={() => setTimeRange("month")}
+          >
+            Dieser Monat
+          </Button>
+        </Stack>
 
-      <div className="stats-overview">
-        <div className="stat-card">
-          <div className="stat-icon">🏃‍♂️</div>
-          <div className="stat-info">
-            <span className="stat-number">{currentStats.workouts}</span>
-            <span className="stat-label">Workouts</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">🔥</div>
-          <div className="stat-info">
-            <span className="stat-number">
+        {/* Stats Overview */}
+        <Grid
+          templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }}
+          gap={6}
+          mb={12}
+        >
+          <Box
+            p={6}
+            bg="bg.secondary"
+            borderColor="border"
+            borderWidth="1px"
+            rounded="lg"
+            textAlign="center"
+          >
+            <Text fontSize="3xl" mb={2}>
+              🏃‍♂️
+            </Text>
+            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
+              {currentStats.workouts}
+            </Text>
+            <Text color="text.secondary" fontSize="sm">
+              Workouts
+            </Text>
+          </Box>
+
+          <Box
+            p={6}
+            bg="bg.secondary"
+            borderColor="border"
+            borderWidth="1px"
+            rounded="lg"
+            textAlign="center"
+          >
+            <Text fontSize="3xl" mb={2}>
+              🔥
+            </Text>
+            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
               {currentStats.calories.toLocaleString()}
-            </span>
-            <span className="stat-label">Kalorien</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">⏱️</div>
-          <div className="stat-info">
-            <span className="stat-number">
+            </Text>
+            <Text color="text.secondary" fontSize="sm">
+              Kalorien
+            </Text>
+          </Box>
+
+          <Box
+            p={6}
+            bg="bg.secondary"
+            borderColor="border"
+            borderWidth="1px"
+            rounded="lg"
+            textAlign="center"
+          >
+            <Text fontSize="3xl" mb={2}>
+              ⏱️
+            </Text>
+            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
               {Math.floor(currentStats.duration / 60)}h{" "}
               {currentStats.duration % 60}m
-            </span>
-            <span className="stat-label">Trainingszeit</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">⚡</div>
-          <div className="stat-info">
-            <span className="stat-number">{currentStats.streak}</span>
-            <span className="stat-label">Tage Streak</span>
-          </div>
-        </div>
-      </div>
+            </Text>
+            <Text color="text.secondary" fontSize="sm">
+              Trainingszeit
+            </Text>
+          </Box>
 
-      <div className="content-grid">
-        <div className="goals-section">
-          <h3>🎯 Deine Ziele</h3>
-          <div className="goals-list">
-            {goals.map((goal, index) => (
-              <div key={index} className="goal-item">
-                <div className="goal-info">
-                  <span className="goal-name">{goal.name}</span>
-                  <span className="goal-progress">
-                    {goal.current.toLocaleString()} /{" "}
-                    {goal.target.toLocaleString()}
-                  </span>
-                </div>
-                <div className="goal-bar">
-                  <div
-                    className={`goal-fill ${goal.achieved ? "achieved" : ""}`}
-                    style={{
-                      width: `${Math.min(
-                        (goal.current / goal.target) * 100,
-                        100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-                <div className="goal-status">{goal.achieved ? "✅" : "🎯"}</div>
-              </div>
+          <Box
+            p={6}
+            bg="bg.secondary"
+            borderColor="border"
+            borderWidth="1px"
+            rounded="lg"
+            textAlign="center"
+          >
+            <Text fontSize="3xl" mb={2}>
+              ⚡
+            </Text>
+            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
+              {currentStats.streak}
+            </Text>
+            <Text color="text.secondary" fontSize="sm">
+              Tage Streak
+            </Text>
+          </Box>
+        </Grid>
+
+        {/* Content Grid */}
+        <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={8} mb={12}>
+          {/* Goals Section */}
+          <Box
+            p={6}
+            bg="bg.secondary"
+            borderColor="border"
+            borderWidth="1px"
+            rounded="lg"
+          >
+            <Heading size="md" color="text.primary" mb={6}>
+              🎯 Deine Ziele
+            </Heading>
+            <Stack gap={4}>
+              {goals.map((goal, index) => (
+                <Box key={index}>
+                  <Stack
+                    direction="row"
+                    justify="space-between"
+                    align="center"
+                    mb={2}
+                  >
+                    <Text
+                      color="text.primary"
+                      fontWeight="medium"
+                      fontSize="sm"
+                    >
+                      {goal.name}
+                    </Text>
+                    <Text color="text.secondary" fontSize="sm">
+                      {goal.current.toLocaleString()} /{" "}
+                      {goal.target.toLocaleString()}
+                    </Text>
+                    <Text fontSize="lg">{goal.achieved ? "✅" : "🎯"}</Text>
+                  </Stack>
+                  <Progress.Root
+                    value={(goal.current / goal.target) * 100}
+                    size="sm"
+                    colorPalette={goal.achieved ? "green" : "orange"}
+                  >
+                    <Progress.Track bg="bg.tertiary">
+                      <Progress.Range />
+                    </Progress.Track>
+                  </Progress.Root>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Workout History */}
+          <Box
+            p={6}
+            bg="bg.secondary"
+            borderColor="border"
+            borderWidth="1px"
+            rounded="lg"
+          >
+            <Heading size="md" color="text.primary" mb={6}>
+              📝 Workout Verlauf
+            </Heading>
+            <Stack gap={3}>
+              {workoutHistory.map((workout, index) => (
+                <Box
+                  key={index}
+                  p={4}
+                  bg="bg.tertiary"
+                  rounded="md"
+                  borderColor="border"
+                  borderWidth="1px"
+                >
+                  <Stack direction="row" justify="space-between" align="center">
+                    <Stack gap={1}>
+                      <Text color="text.secondary" fontSize="xs">
+                        {new Date(workout.date).toLocaleDateString("de-DE", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </Text>
+                      <Text
+                        color="text.primary"
+                        fontWeight="medium"
+                        fontSize="sm"
+                      >
+                        {workout.type}
+                      </Text>
+                    </Stack>
+                    <Stack gap={1} textAlign="right">
+                      <Text color="text.secondary" fontSize="xs">
+                        ⏱️ {workout.duration}min
+                      </Text>
+                      <Text color="text.secondary" fontSize="xs">
+                        🔥 {workout.calories} kcal
+                      </Text>
+                    </Stack>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </Grid>
+
+        {/* Achievements Section */}
+        <Box mb={12}>
+          <Heading size="lg" color="text.primary" mb={6} textAlign="center">
+            🏆 Errungenschaften
+          </Heading>
+          <Grid
+            templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }}
+            gap={6}
+          >
+            {achievements.map((achievement, index) => (
+              <Box
+                key={index}
+                p={6}
+                bg={achievement.earned ? "bg.secondary" : "bg"}
+                borderColor={achievement.earned ? "accent.primary" : "border"}
+                borderWidth="1px"
+                rounded="lg"
+                textAlign="center"
+                opacity={achievement.earned ? 1 : 0.6}
+              >
+                <Text fontSize="3xl" mb={3}>
+                  {achievement.icon}
+                </Text>
+                <Heading size="sm" color="text.primary" mb={2}>
+                  {achievement.title}
+                </Heading>
+                <Text color="text.secondary" fontSize="sm">
+                  {achievement.description}
+                </Text>
+              </Box>
             ))}
-          </div>
-        </div>
+          </Grid>
+        </Box>
 
-        <div className="workout-history">
-          <h3>📝 Workout Verlauf</h3>
-          <div className="history-list">
-            {workoutHistory.map((workout, index) => (
-              <div key={index} className="history-item">
-                <div className="workout-date">
-                  {new Date(workout.date).toLocaleDateString("de-DE", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </div>
-                <div className="workout-details">
-                  <span className="workout-type">{workout.type}</span>
-                  <div className="workout-metrics">
-                    <span>⏱️ {workout.duration}min</span>
-                    <span>🔥 {workout.calories} kcal</span>
-                  </div>
-                </div>
-              </div>
+        {/* Insights Section */}
+        <Box>
+          <Heading size="lg" color="text.primary" mb={6} textAlign="center">
+            🧠 Insights
+          </Heading>
+          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={6}>
+            {insights.map((insight, index) => (
+              <Box
+                key={index}
+                p={6}
+                bg="bg.secondary"
+                borderColor="border"
+                borderWidth="1px"
+                rounded="lg"
+              >
+                <Heading size="sm" color="text.primary" mb={3}>
+                  {insight.title}
+                </Heading>
+                <Text color="text.secondary" fontSize="sm" lineHeight="1.6">
+                  {insight.description}
+                </Text>
+              </Box>
             ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="achievements-section">
-        <h3>🏆 Errungenschaften</h3>
-        <div className="achievements-grid">
-          <div className="achievement-card earned">
-            <div className="achievement-icon">🔥</div>
-            <div className="achievement-info">
-              <h4>Feuer & Flamme</h4>
-              <p>5 Workouts in einer Woche</p>
-            </div>
-          </div>
-          <div className="achievement-card earned">
-            <div className="achievement-icon">💪</div>
-            <div className="achievement-info">
-              <h4>Kraft-Krieger</h4>
-              <p>10 Kraft-Workouts absolviert</p>
-            </div>
-          </div>
-          <div className="achievement-card">
-            <div className="achievement-icon">⚡</div>
-            <div className="achievement-info">
-              <h4>Streak Master</h4>
-              <p>30 Tage in Folge trainiert</p>
-            </div>
-          </div>
-          <div className="achievement-card">
-            <div className="achievement-icon">🎯</div>
-            <div className="achievement-info">
-              <h4>Ziel-Erreicher</h4>
-              <p>Alle monatlichen Ziele erreicht</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="insights-section">
-        <h3>🧠 Insights</h3>
-        <div className="insights-grid">
-          <div className="insight-card">
-            <h4>📈 Beste Performance</h4>
-            <p>
-              Deine besten Workouts finden meist <strong>am Morgen</strong>{" "}
-              statt!
-            </p>
-          </div>
-          <div className="insight-card">
-            <h4>🏃‍♂️ Lieblings-Workout</h4>
-            <p>
-              Du bevorzugst <strong>Ganzkörper-Workouts</strong> - super für
-              allgemeine Fitness!
-            </p>
-          </div>
-          <div className="insight-card">
-            <h4>📊 Fortschritt</h4>
-            <p>
-              Deine Ausdauer hat sich in den letzten 4 Wochen um{" "}
-              <strong>15%</strong> verbessert!
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Grid>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 
