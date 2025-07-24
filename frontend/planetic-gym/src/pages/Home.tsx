@@ -31,11 +31,7 @@ const Home = () => {
     },
   ];
 
-  const stats = [
-    { number: "12", label: "Workouts absolviert" },
-    { number: "5.2kg", label: "Gewicht verloren" },
-    { number: "28", label: "Trainingstage" },
-  ];
+  // ...existing code...
 
   return (
     <Box>
@@ -155,33 +151,7 @@ const Home = () => {
         </Container>
       </Box>
 
-      {/* Quick Stats Section */}
-      <Box py={20} bg="bg.secondary">
-        <Container maxW="7xl">
-          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={8}>
-            {stats.map((stat, index) => (
-              <Box
-                key={index}
-                p={8}
-                bg="bg.tertiary"
-                borderColor="border"
-                borderWidth="1px"
-                rounded="lg"
-                textAlign="center"
-              >
-                <Stack gap={2}>
-                  <Text fontSize="4xl" fontWeight="bold" color="accent.primary">
-                    {stat.number}
-                  </Text>
-                  <Text color="text.secondary" fontSize="lg">
-                    {stat.label}
-                  </Text>
-                </Stack>
-              </Box>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
+      {/* Quick Stats Section entfernt */}
     </Box>
   );
 };

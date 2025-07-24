@@ -1,23 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Box } from "@chakra-ui/react";
 import Header from "./components/Header";
+import LoadingAnimation from "./components/LoadingAnimation";
 import Home from "./pages/Home";
 import Trainingsplan from "./pages/Trainingsplan";
 import LiveWorkout from "./pages/LiveWorkout";
 import Statistiken from "./pages/Statistiken";
-import WelcomePopup from "./components/WelcomePopup";
+// ...existing code...
 
 function App() {
-  const [showWelcomePopup, setShowWelcomePopup] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simuliere ein globales Laden, z.B. beim Initialisieren
+    const timer = setTimeout(() => setLoading(false), 2000); // 2 Sekunden
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <LoadingAnimation />;
+  }
 
   return (
     <Router>
       <Box minH="100vh" bg="bg">
         <Header />
-        {showWelcomePopup && (
-          <WelcomePopup onClose={() => setShowWelcomePopup(false)} />
-        )}
+        {/* WelcomePopup entfernt */}
         <Box as="main" pt="80px">
           <Routes>
             <Route path="/" element={<Home />} />
