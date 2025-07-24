@@ -10,6 +10,16 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"label": "Backend Server",
+			"type": "shell",
+			"command": "python -m uvicorn main:app --reload --port 8000",
+			"group": "build",
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			}
 		}
 	]
 }

@@ -92,6 +92,26 @@ const LiveWorkout = () => {
     }
   }, []);
 
+  // Function to handle training loading with workout check
+  const handleLoadTraining = async () => {
+    if (isWorkoutActive) {
+      const confirmAction = window.confirm(
+        "Ein Workout ist gerade aktiv! Möchten Sie das Workout beenden und ein neues Training laden?\n\nKlicken Sie 'OK', um das Workout zu beenden und ein neues Training zu laden, oder 'Abbrechen', um mit dem aktuellen Workout fortzufahren."
+      );
+      if (!confirmAction) {
+        return; // User cancelled, stay with current workout
+      }
+      // Stop the current workout first
+      await stopWorkout();
+    }
+
+    // Now load new training
+    const dayId = prompt("Trainingstag-ID aus der Datenbank eingeben:");
+    if (dayId) {
+      loadWorkingDay(parseInt(dayId));
+    }
+  };
+
   const loadWorkingDay = async (dayId: number) => {
     try {
       setIsLoading(true);
@@ -129,14 +149,26 @@ const LiveWorkout = () => {
 
   // Save workout results to database
   const saveWorkoutResults = async () => {
-    if (!workingDay || !workoutSession.dayId) return;
+    if (!workingDay || !workoutSession.dayId) {
+      console.log("No working day or session to save");
+      return false;
+    }
 
     try {
+      setIsLoading(true);
+      setError(null);
+
       // Calculate total sets completed across all exercises
       const totalSets = Object.values(exerciseSets).reduce(
         (total, sets) => total + sets.length,
         0
       );
+
+      console.log("Saving workout results:", {
+        dayId: workoutSession.dayId,
+        totalSets,
+        exerciseResults: exerciseSets,
+      });
 
       // Update working day
       await apiService.updateWorkingDay(workoutSession.dayId, {
@@ -147,19 +179,79 @@ const LiveWorkout = () => {
       for (const [exerciseIndex, sets] of Object.entries(exerciseSets)) {
         const exercise = exercises[parseInt(exerciseIndex)];
         if (exercise?.id && sets.length > 0) {
-          const lastSet = sets[sets.length - 1];
+          // Use the best set (highest weight or most reps) as the first set data
+          const bestSet = sets.reduce((best, current) => {
+            if (current.weight > best.weight) return current;
+            if (current.weight === best.weight && current.reps > best.reps)
+              return current;
+            return best;
+          });
+
           await apiService.updateExercise(exercise.id, {
             sets_completed: sets.length,
-            first_set_weight: lastSet.weight,
-            first_set_reps: lastSet.reps,
+            first_set_weight: bestSet.weight,
+            first_set_reps: bestSet.reps,
+          });
+
+          console.log(`Updated exercise ${exercise.name}:`, {
+            sets: sets.length,
+            weight: bestSet.weight,
+            reps: bestSet.reps,
           });
         }
       }
 
       console.log("Workout results saved successfully!");
+      return true;
     } catch (err) {
       console.error("Error saving workout results:", err);
       setError("Fehler beim Speichern der Trainingsergebnisse");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Complete workout function for the dedicated button
+  const completeWorkout = async () => {
+    if (Object.keys(exerciseSets).length === 0) {
+      setError("Keine Sätze aufgezeichnet. Führe mindestens einen Satz aus.");
+      return;
+    }
+
+    if (!workingDay) {
+      setError(
+        "Kein Training aus der Datenbank geladen. Laden Sie zuerst ein Training, um die Ergebnisse zu speichern."
+      );
+      return;
+    }
+
+    // Clear any previous errors
+    setError(null);
+
+    const success = await saveWorkoutResults();
+    if (success) {
+      setIsWorkoutActive(false);
+      setCurrentExercise(0);
+      setIsPauseModalOpen(false);
+
+      // Show detailed success message
+      const totalSets = Object.values(exerciseSets).reduce(
+        (total, sets) => total + sets.length,
+        0
+      );
+      const exerciseCount = Object.keys(exerciseSets).length;
+
+      alert(
+        `Workout erfolgreich gespeichert! 🎉\n\n📊 Zusammenfassung:\n• ${totalSets} Sets aufgezeichnet\n• ${exerciseCount} Übungen trainiert\n• Training: ${workingDay.title}`
+      );
+
+      // Clear sets after successful save
+      setExerciseSets({});
+      setCompletedExercises(new Set());
+
+      // Optionally redirect to statistics or home
+      // window.location.href = "/statistiken";
     }
   };
 
@@ -220,14 +312,11 @@ const LiveWorkout = () => {
       const nextIdx = currentExercise + 1;
       setCurrentExercise(nextIdx);
     } else {
-      // Workout completed
-      setIsWorkoutActive(false);
-      setCurrentExercise(0);
-
-      // Save results automatically when workout is completed
-      if (workingDay) {
-        saveWorkoutResults();
-      }
+      // All exercises completed - show completion message
+      alert(
+        "Alle Übungen abgeschlossen! 🎉 Vergiss nicht, dein Workout zu speichern!"
+      );
+      // Don't auto-save here, let user decide with the button
     }
   };
 
@@ -867,14 +956,7 @@ const LiveWorkout = () => {
                 bg="accent.primary"
                 color="white"
                 _hover={{ bg: "accent.secondary" }}
-                onClick={() => {
-                  const dayId = prompt(
-                    "Trainingstag-ID aus der Datenbank eingeben:"
-                  );
-                  if (dayId) {
-                    loadWorkingDay(parseInt(dayId));
-                  }
-                }}
+                onClick={handleLoadTraining}
               >
                 📋 Training aus Datenbank laden
               </Button>
@@ -1218,6 +1300,108 @@ const LiveWorkout = () => {
                   </Stack>
                 </Stack>
               </Box>
+
+              {/* Complete Workout Section - Active Workout */}
+              {isWorkoutActive && Object.keys(exerciseSets).length > 0 && (
+                <Box
+                  p={6}
+                  bg="bg.secondary"
+                  borderColor="green.200"
+                  borderWidth="2px"
+                  rounded="lg"
+                  mb={6}
+                >
+                  <Stack gap={4} textAlign="center">
+                    <Heading size="md" color="text.primary">
+                      🏁 Workout beenden
+                    </Heading>
+                    <Text color="text.secondary" fontSize="sm">
+                      Speichere dein Workout in der Datenbank mit allen Sets,
+                      Gewichten und Wiederholungen
+                    </Text>
+                    <Text color="text.secondary" fontSize="xs">
+                      Bisher aufgezeichnet:{" "}
+                      {Object.values(exerciseSets).reduce(
+                        (total, sets) => total + sets.length,
+                        0
+                      )}{" "}
+                      Sets
+                    </Text>
+                    <Button
+                      size="lg"
+                      bg="green.600"
+                      color="white"
+                      _hover={{ bg: "green.700" }}
+                      px={8}
+                      py={6}
+                      fontSize="lg"
+                      fontWeight="bold"
+                      onClick={completeWorkout}
+                      loading={isLoading}
+                    >
+                      {isLoading
+                        ? "Speichere..."
+                        : "🎉 Workout abschließen & speichern"}
+                    </Button>
+                    {error && (
+                      <Text color="red.500" fontSize="sm" mt={2}>
+                        {error}
+                      </Text>
+                    )}
+                  </Stack>
+                </Box>
+              )}
+
+              {/* Save Workout Section - When workout is stopped but has sets */}
+              {!isWorkoutActive &&
+                Object.keys(exerciseSets).length > 0 &&
+                workingDay && (
+                  <Box
+                    p={6}
+                    bg="bg.secondary"
+                    borderColor="blue.200"
+                    borderWidth="2px"
+                    rounded="lg"
+                    mb={6}
+                  >
+                    <Stack gap={4} textAlign="center">
+                      <Heading size="md" color="text.primary">
+                        💾 Workout speichern
+                      </Heading>
+                      <Text color="text.secondary" fontSize="sm">
+                        Du hast aufgezeichnete Sets. Möchtest du diese in der
+                        Datenbank speichern?
+                      </Text>
+                      <Text color="text.secondary" fontSize="xs">
+                        Aufgezeichnet:{" "}
+                        {Object.values(exerciseSets).reduce(
+                          (total, sets) => total + sets.length,
+                          0
+                        )}{" "}
+                        Sets aus {Object.keys(exerciseSets).length} Übungen
+                      </Text>
+                      <Button
+                        size="lg"
+                        bg="blue.600"
+                        color="white"
+                        _hover={{ bg: "blue.700" }}
+                        px={8}
+                        py={6}
+                        fontSize="lg"
+                        fontWeight="bold"
+                        onClick={completeWorkout}
+                        loading={isLoading}
+                      >
+                        {isLoading ? "Speichere..." : "💾 Jetzt speichern"}
+                      </Button>
+                      {error && (
+                        <Text color="red.500" fontSize="sm" mt={2}>
+                          {error}
+                        </Text>
+                      )}
+                    </Stack>
+                  </Box>
+                )}
 
               {/* Workout Progress */}
               <Box

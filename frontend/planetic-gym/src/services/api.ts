@@ -28,6 +28,39 @@ export interface WorkingPlan {
   days: WorkingDay[];
 }
 
+// Statistics Types
+export interface WeightProgressionPoint {
+  date: string;
+  weight: number;
+}
+
+export interface ExerciseFrequency {
+  exercise_id: number;
+  exercise_title: string;
+  frequency: number;
+}
+
+export interface ExerciseStatistics {
+  exercise_id: number;
+  exercise_title: string;
+  total_workouts: number;
+  weight_progression: WeightProgressionPoint[];
+  last_workout_date?: string;
+}
+
+export interface WorkoutStatistics {
+  total_workouts: number;
+  weekly_workouts: number;
+  monthly_workouts: number;
+  last_three_workouts: WorkingDay[];
+}
+
+export interface OverallStatistics {
+  workout_stats: WorkoutStatistics;
+  exercise_frequencies: ExerciseFrequency[];
+  exercise_stats: ExerciseStatistics[];
+}
+
 // API Service
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -119,6 +152,27 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
+  }
+
+  // Statistics endpoints
+  async getOverallStatistics(): Promise<OverallStatistics> {
+    return this.request('/api/training/statistics/');
+  }
+
+  async getExerciseStatistics(exerciseId: number): Promise<ExerciseStatistics> {
+    return this.request(`/api/training/statistics/exercise/${exerciseId}`);
+  }
+
+  async getExerciseFrequency(days: number = 30): Promise<ExerciseFrequency[]> {
+    return this.request(`/api/training/statistics/exercise-frequency?days=${days}`);
+  }
+
+  async getWeightProgression(exerciseId: number, limit: number = 20): Promise<WeightProgressionPoint[]> {
+    return this.request(`/api/training/statistics/weight-progression/${exerciseId}?limit=${limit}`);
+  }
+
+  async getWorkoutStatistics(): Promise<WorkoutStatistics> {
+    return this.request('/api/training/statistics/workout-count');
   }
 }
 

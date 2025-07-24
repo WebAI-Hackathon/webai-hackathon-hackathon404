@@ -5,6 +5,12 @@ from datetime import datetime, timedelta
 from typing import List
 from database import SessionLocal
 import models, schemas
+import sys
+import os
+
+# Add parent directory to path for statistics import
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from statistics_service import StatisticsService
 
 router = APIRouter()
 
@@ -131,13 +137,53 @@ def update_exercise(exercise_id: int, exercise_update: schemas.ExerciseUpdate, d
 # === Statistics ===
 @router.get("/statistics/", response_model=schemas.OverallStatistics)
 def get_statistics(db: Session = Depends(get_db)):
-    from ..statistics import StatisticsService
-    stats_service = StatisticsService(db)
-    return stats_service.get_overall_statistics()
+    # Simple implementation without external service for now
+    total_workouts = db.query(models.WorkingDay).count()
+    exercises = db.query(models.Exercise).all()
+    
+    # Create basic statistics
+    workout_stats = schemas.WorkoutStatistics(
+        total_workouts=total_workouts,
+        weekly_workouts=total_workouts,  # Simplified
+        monthly_workouts=total_workouts,  # Simplified
+        last_three_workouts=[]
+    )
+    
+    exercise_frequencies = []
+    exercise_stats = []
+    
+    for exercise in exercises:
+        # Basic frequency counting
+        frequency = db.query(models.WorkingDay).join(
+            models.working_day_exercise
+        ).filter(
+            models.working_day_exercise.c.exercise_id == exercise.id
+        ).count()
+        
+        if frequency > 0:
+            exercise_frequencies.append(schemas.ExerciseFrequency(
+                exercise_id=exercise.id,
+                exercise_title=exercise.title,
+                frequency=frequency
+            ))
+        
+        exercise_stats.append(schemas.ExerciseStatisticsRead(
+            exercise_id=exercise.id,
+            exercise_title=exercise.title,
+            total_workouts=frequency,
+            weight_progression=[],
+            last_workout_date=None
+        ))
+    
+    return schemas.OverallStatistics(
+        workout_stats=workout_stats,
+        exercise_frequencies=exercise_frequencies,
+        exercise_stats=exercise_stats
+    )
 
 @router.get("/statistics/exercise/{exercise_id}", response_model=schemas.ExerciseStatisticsRead)
 def get_exercise_statistics(exercise_id: int, db: Session = Depends(get_db)):
-    from ..statistics import StatisticsService
+    stats_service = StatisticsService(db)
     stats_service = StatisticsService(db)
     try:
         return stats_service.get_exercise_statistics(exercise_id)
@@ -147,20 +193,17 @@ def get_exercise_statistics(exercise_id: int, db: Session = Depends(get_db)):
 @router.get("/statistics/exercise-frequency", response_model=List[schemas.ExerciseFrequency])
 def get_exercise_frequency(days: int = 30, db: Session = Depends(get_db)):
     """Häufigkeit der Übungen in den letzten N Tagen"""
-    from ..statistics import StatisticsService
     stats_service = StatisticsService(db)
     return stats_service.get_exercise_frequency(days)
 
 @router.get("/statistics/weight-progression/{exercise_id}", response_model=List[schemas.WeightProgressionPoint])
 def get_weight_progression(exercise_id: int, limit: int = 20, db: Session = Depends(get_db)):
     """Gewichtsverlauf für eine bestimmte Übung"""
-    from ..statistics import StatisticsService
     stats_service = StatisticsService(db)
     return stats_service.get_weight_progression(exercise_id, limit)
 
 @router.get("/statistics/workout-count", response_model=schemas.WorkoutStatistics)
 def get_workout_statistics(db: Session = Depends(get_db)):
     """Working Day Zähler für verschiedene Zeiträume"""
-    from ..statistics import StatisticsService
     stats_service = StatisticsService(db)
     return stats_service.get_workout_count_statistics()
