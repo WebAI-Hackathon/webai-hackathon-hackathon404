@@ -11,15 +11,12 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { apiService } from "../services/api";
-import type { 
-  OverallStatistics
-} from "../services/api";
+import type { OverallStatistics } from "../services/api";
 
 const Statistiken = () => {
   const [statistics, setStatistics] = useState<OverallStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<"week" | "month">("week");
 
   // Load statistics from backend
   useEffect(() => {
@@ -30,14 +27,16 @@ const Statistiken = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const stats = await apiService.getOverallStatistics();
       setStatistics(stats);
-      
+
       console.log("Loaded statistics:", stats);
     } catch (err) {
       console.error("Error loading statistics:", err);
-      setError(err instanceof Error ? err.message : "Fehler beim Laden der Statistiken");
+      setError(
+        err instanceof Error ? err.message : "Fehler beim Laden der Statistiken"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +97,11 @@ const Statistiken = () => {
             <Text color="red.500" mb={4}>
               {error}
             </Text>
-            <Button onClick={refreshStatistics} colorScheme="red" variant="outline">
+            <Button
+              onClick={refreshStatistics}
+              colorScheme="red"
+              variant="outline"
+            >
               Erneut versuchen
             </Button>
           </Box>
@@ -122,9 +125,7 @@ const Statistiken = () => {
             <Text color="blue.600" fontWeight="bold" mb={2}>
               ℹ️ Keine Statistiken verfügbar
             </Text>
-            <Text color="blue.500">
-              Führe zuerst einige Workouts durch!
-            </Text>
+            <Text color="blue.500">Führe zuerst einige Workouts durch!</Text>
           </Box>
         </Container>
       </Box>
@@ -145,7 +146,6 @@ const Statistiken = () => {
 
   // Current stats based on time range
   const currentStats = {
-    workouts: timeRange === "week" ? workoutStats.weekly_workouts : workoutStats.monthly_workouts,
     totalWorkouts: workoutStats.total_workouts,
     calories: estimatedCalories,
     duration: estimatedTrainingTime,
@@ -163,43 +163,13 @@ const Statistiken = () => {
           <Text fontSize="lg" color="text.secondary">
             Verfolge deinen Fortschritt basierend auf echten Trainingsdaten
           </Text>
-          <Button 
-            onClick={refreshStatistics} 
-            size="sm" 
+          <Button
+            onClick={refreshStatistics}
+            size="sm"
             variant="outline"
             colorScheme="blue"
           >
             🔄 Aktualisieren
-          </Button>
-        </Stack>
-
-        {/* Time Range Selector */}
-        <Stack direction="row" gap={2} justify="center" mb={8}>
-          <Button
-            variant={timeRange === "week" ? "solid" : "outline"}
-            bg={timeRange === "week" ? "accent.primary" : "transparent"}
-            color={timeRange === "week" ? "white" : "text.primary"}
-            borderColor="accent.primary"
-            _hover={{
-              bg: timeRange === "week" ? "accent.secondary" : "accent.primary",
-              color: "white",
-            }}
-            onClick={() => setTimeRange("week")}
-          >
-            Diese Woche
-          </Button>
-          <Button
-            variant={timeRange === "month" ? "solid" : "outline"}
-            bg={timeRange === "month" ? "accent.primary" : "transparent"}
-            color={timeRange === "month" ? "white" : "text.primary"}
-            borderColor="accent.primary"
-            _hover={{
-              bg: timeRange === "month" ? "accent.secondary" : "accent.primary",
-              color: "white",
-            }}
-            onClick={() => setTimeRange("month")}
-          >
-            Dieser Monat
           </Button>
         </Stack>
 
@@ -246,44 +216,6 @@ const Statistiken = () => {
               Sets gesamt
             </Text>
           </Box>
-
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-            textAlign="center"
-          >
-            <Text fontSize="3xl" mb={2}>
-              🔥
-            </Text>
-            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
-              ~{estimatedCalories}
-            </Text>
-            <Text color="text.secondary" fontSize="sm">
-              Kalorien (geschätzt)
-            </Text>
-          </Box>
-
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-            textAlign="center"
-          >
-            <Text fontSize="3xl" mb={2}>
-              ⏱️
-            </Text>
-            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
-              ~{Math.floor(estimatedTrainingTime / 60)}h {estimatedTrainingTime % 60}m
-            </Text>
-            <Text color="text.secondary" fontSize="sm">
-              Trainingszeit (geschätzt)
-            </Text>
-          </Box>
         </Grid>
 
         {/* Content Grid */}
@@ -321,7 +253,11 @@ const Statistiken = () => {
                       </Text>
                     </Stack>
                     <Progress.Root
-                      value={(exercise.frequency / (exerciseFreqs[0]?.frequency || 1)) * 100}
+                      value={
+                        (exercise.frequency /
+                          (exerciseFreqs[0]?.frequency || 1)) *
+                        100
+                      }
                       size="sm"
                       colorPalette="green"
                     >
@@ -353,7 +289,13 @@ const Statistiken = () => {
             {exerciseStats.length > 0 ? (
               <Stack gap={3}>
                 {/* Header */}
-                <Grid templateColumns="2fr 1fr 1.5fr" gap={4} p={3} bg="bg.tertiary" rounded="md">
+                <Grid
+                  templateColumns="2fr 1fr 1.5fr"
+                  gap={4}
+                  p={3}
+                  bg="bg.tertiary"
+                  rounded="md"
+                >
                   <Text color="text.secondary" fontSize="sm" fontWeight="bold">
                     Übung
                   </Text>
@@ -364,14 +306,14 @@ const Statistiken = () => {
                     Letztes Training
                   </Text>
                 </Grid>
-                
+
                 {/* Data rows */}
                 {exerciseStats.slice(0, 5).map((exercise) => (
-                  <Grid 
-                    key={exercise.exercise_id} 
-                    templateColumns="2fr 1fr 1.5fr" 
-                    gap={4} 
-                    p={3} 
+                  <Grid
+                    key={exercise.exercise_id}
+                    templateColumns="2fr 1fr 1.5fr"
+                    gap={4}
+                    p={3}
                     borderBottom="1px solid"
                     borderColor="border"
                   >
@@ -382,10 +324,9 @@ const Statistiken = () => {
                       {exercise.total_workouts}
                     </Text>
                     <Text color="text.secondary" fontSize="xs">
-                      {exercise.last_workout_date 
-                        ? formatDate(exercise.last_workout_date) 
-                        : "Nie"
-                      }
+                      {exercise.last_workout_date
+                        ? formatDate(exercise.last_workout_date)
+                        : "Nie"}
                     </Text>
                   </Grid>
                 ))}
@@ -411,7 +352,10 @@ const Statistiken = () => {
             <Heading size="md" color="text.primary" mb={6}>
               📝 Letzte Trainingstage
             </Heading>
-            <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
+            <Grid
+              templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
+              gap={4}
+            >
               {workoutStats.last_three_workouts.map((workout) => (
                 <Box
                   key={workout.id}
@@ -447,7 +391,7 @@ const Statistiken = () => {
           </Box>
         )}
 
-        {/* Progress Insights */}
+        {/* Progress Insights
         <Box
           p={6}
           bg="bg.secondary"
@@ -464,27 +408,25 @@ const Statistiken = () => {
                 📊 Gesamtfortschritt
               </Text>
               <Text color="text.secondary" fontSize="sm" lineHeight="1.6">
-                Du hast bereits {currentStats.totalWorkouts} Trainingstage absolviert 
-                und dabei {totalSetsCompleted} Sets trainiert. 
-                Das entspricht etwa {Math.floor(estimatedTrainingTime / 60)} Stunden Training!
+                Du hast bereits {currentStats.totalWorkouts} Trainingstage
+                absolviert und dabei {totalSetsCompleted} Sets trainiert.
               </Text>
             </Box>
-            
+
             <Box>
               <Text color="accent.primary" fontWeight="bold" mb={2}>
                 🎯 Nächste Ziele
               </Text>
               <Text color="text.secondary" fontSize="sm" lineHeight="1.6">
-                {currentStats.totalWorkouts < 10 
-                  ? "Erreiche 10 Trainingstage für deinen ersten Meilenstein!" 
+                {currentStats.totalWorkouts < 10
+                  ? "Erreiche 10 Trainingstage für deinen ersten Meilenstein!"
                   : currentStats.totalWorkouts < 25
                   ? "Du bist auf dem Weg zu 25 Trainingstagen - bleib dran!"
-                  : "Großartig! Du bist ein echter Fitness-Profi!"
-                }
+                  : "Großartig! Du bist ein echter Fitness-Profi!"}
               </Text>
             </Box>
           </Grid>
-        </Box>
+        </Box> */}
       </Container>
     </Box>
   );
