@@ -79,6 +79,12 @@ class ApiService {
     return this.request(`/api/training/plan/${planId}`);
   }
 
+  async deleteWorkingPlan(planId: number): Promise<{ message: string }> {
+    return this.request(`/api/training/plan/${planId}`, {
+      method: "DELETE",
+    });
+  }
+
   // Working Day endpoints
   async createWorkingDay(day: {
     day_number: number;
@@ -99,6 +105,12 @@ class ApiService {
 
   async getWorkingDay(dayId: number): Promise<WorkingDay> {
     return this.request(`/api/training/day/${dayId}`);
+  }
+
+  async deleteWorkingDay(dayId: number): Promise<{ message: string }> {
+    return this.request(`/api/training/day/${dayId}`, {
+      method: "DELETE",
+    });
   }
 
   // Update methods for live workout

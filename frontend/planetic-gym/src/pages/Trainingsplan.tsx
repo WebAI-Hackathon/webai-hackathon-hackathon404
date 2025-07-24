@@ -31,7 +31,6 @@ interface TrainingDay {
   name: string;
   focus: string;
   exercises: FrontendExercise[];
-  duration: number;
 }
 
 interface TrainingWeek {
@@ -58,7 +57,6 @@ const Trainingsplan = () => {
     name: "",
     focus: "",
     exercises: [{ name: "", repetitions: 10, weight: 0 }] as FrontendExercise[],
-    duration: 30,
   });
 
   const [trainingWeeks, setTrainingWeeks] = useState<TrainingWeek[]>([]);
@@ -75,7 +73,6 @@ const Trainingsplan = () => {
         id: day.id?.toString() || "",
         name: day.title,
         focus: day.description || "Ganzkörper",
-        duration: 30, // Default duration, kann später erweitert werden
         exercises: day.exercises.map((exercise) => ({
           id: exercise.id, // Backend Exercise ID mitführen
           name: exercise.title,
@@ -122,7 +119,6 @@ const Trainingsplan = () => {
       exercises: [
         { name: "", repetitions: 10, weight: 0 },
       ] as FrontendExercise[],
-      duration: 30,
     });
     setShowNewDayDialog(true);
   };
@@ -194,7 +190,6 @@ const Trainingsplan = () => {
       name: day.name,
       focus: day.focus,
       exercises: [...day.exercises],
-      duration: day.duration,
     });
     setShowEditDayDialog(true);
   };
@@ -474,21 +469,53 @@ const Trainingsplan = () => {
     }
   };
 
-  const handleDeleteDay = (event: Event) => {
+  const handleDeleteDay = async (event: Event) => {
     const details = (event as CustomEvent).detail;
-    setTrainingWeeks((weeks) =>
-      weeks.map((week) => ({
-        ...week,
-        days: week.days.filter((day) => day.id !== details.dayId),
-      }))
-    );
+    try {
+      // Versuche die dayId als Backend-ID zu interpretieren (falls es eine Zahl ist)
+      const dayId = parseInt(details.dayId);
+      if (!isNaN(dayId)) {
+        // Lösche vom Backend
+        await apiService.deleteWorkingDay(dayId);
+
+        // Aktualisiere die Daten
+        await refreshData();
+      } else {
+        // Falls keine gültige Backend-ID, lösche nur aus dem Frontend-State
+        setTrainingWeeks((weeks) =>
+          weeks.map((week) => ({
+            ...week,
+            days: week.days.filter((day) => day.id !== details.dayId),
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting day:", error);
+      setError("Fehler beim Löschen des Trainingstags");
+    }
   };
 
-  const handleDeleteWeek = (event: Event) => {
+  const handleDeleteWeek = async (event: Event) => {
     const details = (event as CustomEvent).detail;
-    setTrainingWeeks((weeks) =>
-      weeks.filter((week) => week.id !== details.weekId)
-    );
+    try {
+      // Versuche die weekId als Backend-ID zu interpretieren (falls es eine Zahl ist)
+      const weekId = parseInt(details.weekId);
+      if (!isNaN(weekId)) {
+        // Lösche vom Backend
+        await apiService.deleteWorkingPlan(weekId);
+
+        // Aktualisiere die Daten
+        await refreshData();
+      } else {
+        // Falls keine gültige Backend-ID, lösche nur aus dem Frontend-State
+        setTrainingWeeks((weeks) =>
+          weeks.filter((week) => week.id !== details.weekId)
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting week:", error);
+      setError("Fehler beim Löschen der Trainingswoche");
+    }
   };
 
   const handleStartWorkout = (event: Event) => {
@@ -566,12 +593,6 @@ const Trainingsplan = () => {
                 type="string"
                 required
                 description="Trainingsfokus (z.B. Oberkörper, Unterkörper, Ganzkörper)"
-              />
-              {/* @ts-ignore */}
-              <prop
-                name="duration"
-                type="number"
-                description="Dauer in Minuten (Standard: 30)"
               />
               {/* @ts-ignore */}
               <prop
@@ -664,12 +685,6 @@ const Trainingsplan = () => {
           description="Trainingsfokus (z.B. Oberkörper, Unterkörper, Ganzkörper)"
         />
         {/* @ts-ignore */}
-        <prop
-          name="duration"
-          type="number"
-          description="Dauer in Minuten (Standard: 30)"
-        />
-        {/* @ts-ignore */}
         <prop name="exercises" type="array" description="Liste der Übungen">
           {/* @ts-ignore */}
           <array>
@@ -723,12 +738,6 @@ const Trainingsplan = () => {
         />
         {/* @ts-ignore */}
         <prop name="focus" type="string" description="Neuer Trainingsfokus" />
-        {/* @ts-ignore */}
-        <prop
-          name="duration"
-          type="number"
-          description="Neue Dauer in Minuten"
-        />
         {/* @ts-ignore */}
         <prop
           name="exercises"
@@ -934,9 +943,6 @@ const Trainingsplan = () => {
                                 <Heading size="md" color="text.primary">
                                   {day.name}
                                 </Heading>
-                                <Text fontSize="sm" color="text.secondary">
-                                  ⏱️ {day.duration}min
-                                </Text>
                               </Flex>
 
                               <Badge
@@ -1250,29 +1256,6 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Dauer (Minuten):
-                    </Text>
-                    <Input
-                      type="number"
-                      value={newDayData.duration}
-                      onChange={(e) =>
-                        setNewDayData({
-                          ...newDayData,
-                          duration: parseInt(e.target.value) || 30,
-                        })
-                      }
-                      min="10"
-                      max="120"
-                    />
-                  </Box>
-
-                  <Box>
-                    <Text
-                      fontSize="sm"
-                      fontWeight="bold"
-                      color="text.primary"
-                      mb={1}
-                    >
                       Übungen:
                     </Text>
                     <Stack gap={2}>
@@ -1477,29 +1460,6 @@ const Trainingsplan = () => {
                         setNewDayData({ ...newDayData, focus: e.target.value })
                       }
                       placeholder="z.B. Oberkörper, Unterkörper, Cardio..."
-                    />
-                  </Box>
-
-                  <Box>
-                    <Text
-                      fontSize="sm"
-                      fontWeight="bold"
-                      color="text.primary"
-                      mb={1}
-                    >
-                      Dauer (Minuten):
-                    </Text>
-                    <Input
-                      type="number"
-                      value={newDayData.duration}
-                      onChange={(e) =>
-                        setNewDayData({
-                          ...newDayData,
-                          duration: parseInt(e.target.value) || 30,
-                        })
-                      }
-                      min="10"
-                      max="120"
                     />
                   </Box>
 

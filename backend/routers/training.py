@@ -55,6 +55,18 @@ def get_plan(plan_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Plan not found")
     return plan
 
+@router.delete("/plan/{plan_id}")
+def delete_plan(plan_id: int, db: Session = Depends(get_db)):
+    plan = db.query(models.WorkingPlan).filter(models.WorkingPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # SQLAlchemy wird automatisch alle abhängigen WorkingDays löschen
+    # dank cascade="all, delete-orphan" in der Beziehungsdefinition
+    db.delete(plan)
+    db.commit()
+    return {"message": "Plan successfully deleted"}
+
 # === WorkingDays ===
 @router.post("/day/", response_model=schemas.WorkingDayRead)
 def create_day(day: schemas.WorkingDayCreate, db: Session = Depends(get_db)):
@@ -84,6 +96,20 @@ def get_day(day_id: int, db: Session = Depends(get_db)):
     if not day:
         raise HTTPException(status_code=404, detail="Working day not found")
     return day
+
+@router.delete("/day/{day_id}")
+def delete_day(day_id: int, db: Session = Depends(get_db)):
+    day = db.query(models.WorkingDay).filter(models.WorkingDay.id == day_id).first()
+    if not day:
+        raise HTTPException(status_code=404, detail="Working day not found")
+    
+    # Entferne alle Verbindungen zu Übungen (many-to-many)
+    day.exercises.clear()
+    
+    # Lösche den Tag
+    db.delete(day)
+    db.commit()
+    return {"message": "Working day successfully deleted"}
 
 # Update WorkingDay (for completed sets)
 @router.put("/day/{day_id}", response_model=schemas.WorkingDayRead)
