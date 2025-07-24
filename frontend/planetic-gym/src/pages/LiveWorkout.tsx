@@ -11,6 +11,7 @@ import {
   Badge,
   Input,
 } from "@chakra-ui/react";
+import { Tool } from "../components/Tool";
 
 const LiveWorkout = () => {
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
@@ -141,8 +142,532 @@ const LiveWorkout = () => {
   const workoutProgressPercentage =
     (completedExercises.size / exercises.length) * 100;
 
+  // VOIX Tool Handlers
+  const handleStartWorkout = (_event: Event) => {
+    console.log("VOIX: Starting workout");
+    startWorkout();
+  };
+
+  const handlePauseWorkout = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const pauseTime = details?.pauseTime || 30;
+    console.log("VOIX: Pausing workout for", pauseTime, "seconds");
+    pauseWorkout(pauseTime);
+  };
+
+  const handleStopWorkout = (_event: Event) => {
+    console.log("VOIX: Stopping workout");
+    stopWorkout();
+  };
+
+  const handleCompleteSet = (_event: Event) => {
+    console.log("VOIX: Completing current set");
+    completeSet();
+  };
+
+  const handleNextExercise = (_event: Event) => {
+    console.log("VOIX: Moving to next exercise");
+    nextExercise();
+  };
+
+  const handlePreviousExercise = (_event: Event) => {
+    console.log("VOIX: Moving to previous exercise");
+    previousExercise();
+  };
+
+  const handleUpdateExercise = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseIndex, weight, reps } = details;
+    console.log(
+      "VOIX: Updating exercise",
+      exerciseIndex,
+      "with weight:",
+      weight,
+      "reps:",
+      reps
+    );
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      updateExercise(exerciseIndex, weight || 0, reps || 0);
+    }
+  };
+
+  const handleJumpToExercise = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseIndex } = details;
+    console.log("VOIX: Jumping to exercise", exerciseIndex);
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      setCurrentExercise(exerciseIndex);
+    }
+  };
+
+  const handleEditSet = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseIndex, setIndex, weight, reps } = details;
+    console.log(
+      "VOIX: Editing set",
+      setIndex,
+      "of exercise",
+      exerciseIndex,
+      "with weight:",
+      weight,
+      "reps:",
+      reps
+    );
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      editSet(exerciseIndex, setIndex, reps || 0, weight || 0);
+    }
+  };
+
+  const handleDeleteSet = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseIndex, setIndex } = details;
+    console.log("VOIX: Deleting set", setIndex, "of exercise", exerciseIndex);
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      deleteSet(exerciseIndex, setIndex);
+    }
+  };
+
+  const handleAddCustomSet = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseIndex, weight, reps } = details;
+    console.log(
+      "VOIX: Adding custom set to exercise",
+      exerciseIndex,
+      "with weight:",
+      weight,
+      "reps:",
+      reps
+    );
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      const newSets = { ...exerciseSets };
+      if (!newSets[exerciseIndex]) {
+        newSets[exerciseIndex] = [];
+      }
+      newSets[exerciseIndex].push({
+        reps: reps || exercises[exerciseIndex]?.reps || 0,
+        weight: weight || exercises[exerciseIndex]?.weight || 0,
+      });
+      setExerciseSets(newSets);
+    }
+  };
+
+  const handleAddMultipleSets = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseIndex, count, weight, reps } = details;
+    console.log(
+      "VOIX: Adding",
+      count,
+      "sets to exercise",
+      exerciseIndex,
+      "with weight:",
+      weight,
+      "reps:",
+      reps
+    );
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length && count > 0) {
+      const newSets = { ...exerciseSets };
+      if (!newSets[exerciseIndex]) {
+        newSets[exerciseIndex] = [];
+      }
+
+      // Füge die angegebene Anzahl von Sets hinzu
+      for (let i = 0; i < count; i++) {
+        newSets[exerciseIndex].push({
+          reps: reps || exercises[exerciseIndex]?.reps || 0,
+          weight: weight || exercises[exerciseIndex]?.weight || 0,
+        });
+      }
+      setExerciseSets(newSets);
+    }
+  };
+
+  const handleCompleteMultipleSets = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { count } = details;
+    console.log("VOIX: Completing", count, "sets for current exercise");
+
+    if (count > 0) {
+      const newSets = { ...exerciseSets };
+      if (!newSets[currentExercise]) {
+        newSets[currentExercise] = [];
+      }
+
+      // Füge die angegebene Anzahl von Sets zur aktuellen Übung hinzu
+      for (let i = 0; i < count; i++) {
+        newSets[currentExercise].push({
+          reps: exercises[currentExercise]?.reps || 0,
+          weight: exercises[currentExercise]?.weight || 0,
+        });
+      }
+      setExerciseSets(newSets);
+    }
+  };
+
+  const handleAddSetsToExercise = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseName, sets } = details;
+    console.log(
+      "VOIX: Adding sets to exercise",
+      exerciseName,
+      "with sets:",
+      sets
+    );
+
+    // Finde die Übung basierend auf dem Namen
+    const exerciseIndex = exercises.findIndex(
+      (exercise) =>
+        exercise.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
+        exerciseName.toLowerCase().includes(exercise.name.toLowerCase())
+    );
+
+    if (exerciseIndex >= 0 && sets && Array.isArray(sets)) {
+      // Springe zur Übung
+      setCurrentExercise(exerciseIndex);
+
+      // Füge die Sets hinzu
+      const newSets = { ...exerciseSets };
+      if (!newSets[exerciseIndex]) {
+        newSets[exerciseIndex] = [];
+      }
+
+      // Füge alle angegebenen Sets hinzu
+      sets.forEach((set: { weight?: number; reps?: number }) => {
+        newSets[exerciseIndex].push({
+          reps: set.reps || exercises[exerciseIndex]?.reps || 0,
+          weight: set.weight || exercises[exerciseIndex]?.weight || 0,
+        });
+      });
+
+      setExerciseSets(newSets);
+    }
+  };
+
+  const handleClearExerciseSets = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseName } = details;
+    console.log("VOIX: Clearing all sets for exercise", exerciseName);
+
+    // Finde die Übung basierend auf dem Namen
+    const exerciseIndex = exercises.findIndex(
+      (exercise) =>
+        exercise.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
+        exerciseName.toLowerCase().includes(exercise.name.toLowerCase())
+    );
+
+    if (exerciseIndex >= 0) {
+      // Springe zur Übung
+      setCurrentExercise(exerciseIndex);
+
+      // Lösche alle Sets für diese Übung
+      const newSets = { ...exerciseSets };
+      newSets[exerciseIndex] = [];
+      setExerciseSets(newSets);
+    }
+  };
+
   return (
     <Box py={8}>
+      {/* VOIX Context Elements */}
+      {/* @ts-ignore */}
+      <context name="workoutState">
+        Workout ist {isWorkoutActive ? "aktiv" : "inaktiv"}. Aktuelle Übung:{" "}
+        {currentExercise + 1} von {exercises.length} (
+        {exercises[currentExercise]?.name || "keine"}). Pause-Timer:{" "}
+        {pauseTimer > 0 ? `${pauseTimer} Sekunden` : "nicht aktiv"}.
+        Abgeschlossene Übungen: {completedExercises.size} von {exercises.length}
+        .{/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="currentExercise">
+        {exercises[currentExercise]
+          ? JSON.stringify(exercises[currentExercise])
+          : "Keine aktuelle Übung"}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="exerciseList">
+        {JSON.stringify(exercises)}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="exerciseSets">
+        {JSON.stringify(exerciseSets)}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="currentExerciseSets">
+        Aktuelle Übung ({currentExercise}):{" "}
+        {exercises[currentExercise]?.name || "keine"}. Abgeschlossene Sets:{" "}
+        {exerciseSets[currentExercise]?.length || 0}. Sets Details:{" "}
+        {exerciseSets[currentExercise]
+          ? JSON.stringify(exerciseSets[currentExercise])
+          : "keine Sets"}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* VOIX Tool Elements */}
+      <Tool
+        name="start_workout"
+        description="Startet das Workout"
+        onCall={handleStartWorkout}
+      />
+
+      <Tool
+        name="pause_workout"
+        description="Pausiert das Workout für eine bestimmte Zeit"
+        onCall={handlePauseWorkout}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="pauseTime"
+          type="number"
+          description="Pause-Zeit in Sekunden (Standard: 30)"
+        />
+      </Tool>
+
+      <Tool
+        name="stop_workout"
+        description="Stoppt das Workout komplett"
+        onCall={handleStopWorkout}
+      />
+
+      <Tool
+        name="complete_set"
+        description="Markiert den aktuellen Satz als abgeschlossen"
+        onCall={handleCompleteSet}
+      />
+
+      <Tool
+        name="complete_multiple_sets"
+        description="Markiert mehrere Sätze der aktuellen Übung als abgeschlossen"
+        onCall={handleCompleteMultipleSets}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="count"
+          type="number"
+          required
+          description="Anzahl der Sets die als abgeschlossen markiert werden sollen"
+        />
+      </Tool>
+
+      <Tool
+        name="next_exercise"
+        description="Wechselt zur nächsten Übung"
+        onCall={handleNextExercise}
+      />
+
+      <Tool
+        name="previous_exercise"
+        description="Wechselt zur vorherigen Übung"
+        onCall={handlePreviousExercise}
+      />
+
+      <Tool
+        name="update_exercise"
+        description="Aktualisiert Gewicht und Wiederholungen einer Übung"
+        onCall={handleUpdateExercise}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseIndex"
+          type="number"
+          required
+          description="Index der zu aktualisierenden Übung (0-basiert)"
+        />
+        {/* @ts-ignore */}
+        <prop name="weight" type="number" description="Neues Gewicht in kg" />
+        {/* @ts-ignore */}
+        <prop
+          name="reps"
+          type="number"
+          description="Neue Anzahl Wiederholungen"
+        />
+      </Tool>
+
+      <Tool
+        name="jump_to_exercise"
+        description="Springt direkt zu einer bestimmten Übung"
+        onCall={handleJumpToExercise}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseIndex"
+          type="number"
+          required
+          description="Index der Übung zu der gesprungen werden soll (0-basiert)"
+        />
+      </Tool>
+
+      <Tool
+        name="edit_set"
+        description="Bearbeitet einen bestehenden Satz einer Übung"
+        onCall={handleEditSet}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseIndex"
+          type="number"
+          required
+          description="Index der Übung (0-basiert)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="setIndex"
+          type="number"
+          required
+          description="Index des Satzes (0-basiert)"
+        />
+        {/* @ts-ignore */}
+        <prop name="weight" type="number" description="Neues Gewicht in kg" />
+        {/* @ts-ignore */}
+        <prop
+          name="reps"
+          type="number"
+          description="Neue Anzahl Wiederholungen"
+        />
+      </Tool>
+
+      <Tool
+        name="delete_set"
+        description="Löscht einen bestehenden Satz einer Übung"
+        onCall={handleDeleteSet}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseIndex"
+          type="number"
+          required
+          description="Index der Übung (0-basiert)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="setIndex"
+          type="number"
+          required
+          description="Index des zu löschenden Satzes (0-basiert)"
+        />
+      </Tool>
+
+      <Tool
+        name="add_custom_set"
+        description="Fügt einen benutzerdefinierten Satz zu einer Übung hinzu"
+        onCall={handleAddCustomSet}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseIndex"
+          type="number"
+          required
+          description="Index der Übung (0-basiert)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="weight"
+          type="number"
+          description="Gewicht in kg (verwendet Standard-Gewicht der Übung wenn nicht angegeben)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="reps"
+          type="number"
+          description="Anzahl Wiederholungen (verwendet Standard-Wiederholungen der Übung wenn nicht angegeben)"
+        />
+      </Tool>
+
+      <Tool
+        name="add_multiple_sets"
+        description="Fügt mehrere Sets zu einer Übung hinzu (z.B. wenn bereits Sets abgeschlossen wurden)"
+        onCall={handleAddMultipleSets}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseIndex"
+          type="number"
+          required
+          description="Index der Übung (0-basiert)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="count"
+          type="number"
+          required
+          description="Anzahl der Sets die hinzugefügt werden sollen"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="weight"
+          type="number"
+          description="Gewicht in kg (verwendet Standard-Gewicht der Übung wenn nicht angegeben)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="reps"
+          type="number"
+          description="Anzahl Wiederholungen (verwendet Standard-Wiederholungen der Übung wenn nicht angegeben)"
+        />
+      </Tool>
+
+      <Tool
+        name="add_sets_to_exercise"
+        description="Fügt spezifische Sets zu einer benannten Übung hinzu und springt automatisch zu dieser Übung"
+        onCall={handleAddSetsToExercise}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseName"
+          type="string"
+          required
+          description="Name oder Teil des Namens der Übung (z.B. 'squats', 'push-ups')"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="sets"
+          type="array"
+          required
+          description="Array von Sets mit spezifischen Gewichten und Wiederholungen"
+        >
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="weight"
+                type="number"
+                description="Gewicht für diesen Satz in kg"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="reps"
+                type="number"
+                description="Wiederholungen für diesen Satz"
+              />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
+
+      <Tool
+        name="clear_exercise_sets"
+        description="Löscht alle Sets einer bestimmten Übung"
+        onCall={handleClearExerciseSets}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseName"
+          type="string"
+          required
+          description="Name oder Teil des Namens der Übung (z.B. 'squats', 'push-ups')"
+        />
+      </Tool>
       <Container maxW="6xl">
         {/* Workout Header */}
         <Stack gap={4} textAlign="center" mb={12}>
