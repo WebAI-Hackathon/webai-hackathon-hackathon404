@@ -32,19 +32,25 @@ const Header = () => {
       backdropFilter="blur(10px)"
     >
       <Container maxW="7xl" py={4}>
-        <Flex justify="space-between" align="center">
-          <Link
-            as={RouterLink}
-            to="/"
-            textDecoration="none"
-            _hover={{ textDecoration: "none" }}
-          >
-            <Heading size="lg" color="accent.primary" fontWeight="bold">
-              💪 Planetic Gym
-            </Heading>
-          </Link>
+        <Flex align="center">
+          {/* Logo further left */}
+          <Box mr={12}>
+            <Link
+              as={RouterLink}
+              to="/"
+              textDecoration="none"
+              _hover={{ textDecoration: "none" }}
+            >
+              <Heading size="lg" color="accent.primary" fontWeight="bold">
+                💪 Planetic Gym
+              </Heading>
+            </Link>
+          </Box>
 
-          <Stack direction="row" gap={2}>
+          {/* Spacer pushes nav to right */}
+          <Box flex={1} />
+
+          <Stack direction="row" gap={6} pr={2}>
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (

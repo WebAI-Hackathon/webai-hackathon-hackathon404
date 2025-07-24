@@ -107,7 +107,7 @@ const Home = () => {
       </Box>
 
       {/* Features Section */}
-      <Box py={20} bg="bg">
+      <Box py={1} bg="bg">
         <Container maxW="7xl">
           <Stack gap={16}>
             <Stack gap={4} textAlign="center">
