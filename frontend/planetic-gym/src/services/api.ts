@@ -144,6 +144,34 @@ class ApiService {
     });
   }
 
+  // Statistics endpoints
+  async getOverallStatistics(): Promise<OverallStatistics> {
+    return this.request("/api/training/statistics/");
+  }
+
+  async getExerciseStatistics(exerciseId: number): Promise<ExerciseStatistics> {
+    return this.request(`/api/training/statistics/exercise/${exerciseId}`);
+  }
+
+  async getExerciseFrequency(days: number = 30): Promise<ExerciseFrequency[]> {
+    return this.request(
+      `/api/training/statistics/exercise-frequency?days=${days}`
+    );
+  }
+
+  async getWeightProgression(
+    exerciseId: number,
+    limit: number = 20
+  ): Promise<WeightProgressionPoint[]> {
+    return this.request(
+      `/api/training/statistics/weight-progression/${exerciseId}?limit=${limit}`
+    );
+  }
+
+  async getWorkoutStatistics(): Promise<WorkoutStatistics> {
+    return this.request("/api/training/statistics/workout-count");
+  }
+
   async addExercisesToDay(
     dayId: number,
     exerciseIds: number[]
