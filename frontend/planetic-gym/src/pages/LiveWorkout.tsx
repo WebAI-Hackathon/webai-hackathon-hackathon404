@@ -9,56 +9,125 @@ import {
   Stack,
   Progress,
   Badge,
+  Input,
 } from "@chakra-ui/react";
 
 const LiveWorkout = () => {
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
   const [currentExercise, setCurrentExercise] = useState(0);
-  const [timer, setTimer] = useState(0);
-  const [sets, setSets] = useState(0);
+  const [pauseTimer, setPauseTimer] = useState(0);
+  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+  const [exerciseSets, setExerciseSets] = useState<{
+    [key: number]: Array<{ reps: number; weight: number }>;
+  }>({});
+  const [completedExercises, setCompletedExercises] = useState<Set<number>>(
+    new Set()
+  );
+  const [exercises, setExercises] = useState([
+    { name: "Jumping Jacks", weight: 0, reps: 30 },
+    { name: "Push-ups", weight: 0, reps: 15 },
+    { name: "Squats", weight: 20, reps: 12 },
+    { name: "Plank", weight: 0, reps: 1 },
+    { name: "Burpees", weight: 0, reps: 10 },
+  ]);
+  const [editingExercise, setEditingExercise] = useState<number | null>(null);
+  const [tempWeight, setTempWeight] = useState(0);
+  const [tempReps, setTempReps] = useState(0);
 
-  const exercises = [
-    { name: "Jumping Jacks", duration: 30, rest: 10 },
-    { name: "Push-ups", duration: 45, rest: 15 },
-    { name: "Squats", duration: 40, rest: 10 },
-    { name: "Plank", duration: 60, rest: 20 },
-    { name: "Burpees", duration: 30, rest: 15 },
-  ];
-
+  // Pause timer effect
   useEffect(() => {
     let interval: number;
-    if (isWorkoutActive && timer > 0) {
+    if (isPauseModalOpen && pauseTimer > 0) {
       interval = setInterval(() => {
-        setTimer(timer - 1);
+        setPauseTimer(pauseTimer - 1);
       }, 1000);
-    } else if (isWorkoutActive && timer === 0) {
-      // Move to next exercise or finish workout
-      if (currentExercise < exercises.length - 1) {
-        setCurrentExercise(currentExercise + 1);
-        setTimer(exercises[currentExercise + 1].duration);
-      } else {
-        setIsWorkoutActive(false);
-        setSets(sets + 1);
-        setCurrentExercise(0);
-      }
+    } else if (isPauseModalOpen && pauseTimer === 0) {
+      setIsPauseModalOpen(false);
+      setIsWorkoutActive(true);
     }
     return () => clearInterval(interval);
-  }, [isWorkoutActive, timer, currentExercise, exercises, sets]);
+  }, [isPauseModalOpen, pauseTimer]);
 
   const startWorkout = () => {
     setIsWorkoutActive(true);
-    setTimer(exercises[0].duration);
     setCurrentExercise(0);
   };
 
-  const pauseWorkout = () => {
+  const pauseWorkout = (pauseTime?: number) => {
     setIsWorkoutActive(false);
+    setPauseTimer(pauseTime || 30);
+    setIsPauseModalOpen(true);
   };
 
   const stopWorkout = () => {
     setIsWorkoutActive(false);
-    setTimer(0);
     setCurrentExercise(0);
+    setIsPauseModalOpen(false);
+  };
+
+  const completeSet = () => {
+    const newSets = { ...exerciseSets };
+    if (!newSets[currentExercise]) {
+      newSets[currentExercise] = [];
+    }
+    newSets[currentExercise].push({
+      reps: exercises[currentExercise]?.reps || 0,
+      weight: exercises[currentExercise]?.weight || 0,
+    });
+    setExerciseSets(newSets);
+  };
+
+  const nextExercise = () => {
+    const newCompleted = new Set(completedExercises);
+    newCompleted.add(currentExercise);
+    setCompletedExercises(newCompleted);
+
+    if (currentExercise < exercises.length - 1) {
+      const nextIdx = currentExercise + 1;
+      setCurrentExercise(nextIdx);
+    } else {
+      setIsWorkoutActive(false);
+      setCurrentExercise(0);
+    }
+  };
+
+  const previousExercise = () => {
+    if (currentExercise > 0) {
+      const prevIdx = currentExercise - 1;
+      setCurrentExercise(prevIdx);
+
+      // Remove from completed if going back
+      const newCompleted = new Set(completedExercises);
+      newCompleted.delete(prevIdx);
+      setCompletedExercises(newCompleted);
+    }
+  };
+
+  const updateExercise = (index: number, weight: number, reps: number) => {
+    const newExercises = [...exercises];
+    newExercises[index] = { ...newExercises[index], weight, reps };
+    setExercises(newExercises);
+  };
+
+  const editSet = (
+    exerciseIndex: number,
+    setIndex: number,
+    reps: number,
+    weight: number
+  ) => {
+    const newSets = { ...exerciseSets };
+    if (newSets[exerciseIndex] && newSets[exerciseIndex][setIndex]) {
+      newSets[exerciseIndex][setIndex] = { reps, weight };
+      setExerciseSets(newSets);
+    }
+  };
+
+  const deleteSet = (exerciseIndex: number, setIndex: number) => {
+    const newSets = { ...exerciseSets };
+    if (newSets[exerciseIndex]) {
+      newSets[exerciseIndex].splice(setIndex, 1);
+      setExerciseSets(newSets);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -69,7 +138,8 @@ const LiveWorkout = () => {
       .padStart(2, "0")}`;
   };
 
-  const progressPercentage = (currentExercise / exercises.length) * 100;
+  const workoutProgressPercentage =
+    (completedExercises.size / exercises.length) * 100;
 
   return (
     <Box py={8}>
@@ -102,32 +172,224 @@ const LiveWorkout = () => {
                   <Heading size="xl" color="text.primary">
                     {exercises[currentExercise]?.name || "Bereit?"}
                   </Heading>
-                  <Badge colorPalette="orange" variant="subtle" px={3} py={1}>
-                    {currentExercise + 1} / {exercises.length}
-                  </Badge>
                 </Stack>
 
-                {/* Timer Display */}
+                {/* Exercise Details */}
                 <Box>
-                  <Text
-                    fontSize="6xl"
-                    fontWeight="bold"
-                    color={
-                      timer <= 10 && isWorkoutActive
-                        ? "red.400"
-                        : "accent.primary"
-                    }
-                    fontFamily="mono"
-                  >
-                    {formatTime(timer)}
-                  </Text>
-                  <Text color="text.secondary" fontSize="lg">
-                    {isWorkoutActive ? "Verbleibende Zeit" : "Bereit zum Start"}
-                  </Text>
+                  <Stack gap={4}>
+                    <Box>
+                      <Stack
+                        direction="row"
+                        gap={4}
+                        justify="center"
+                        align="center"
+                      >
+                        <Box>
+                          <Text fontSize="sm" color="text.secondary" mb={1}>
+                            Gewicht (kg)
+                          </Text>
+                          {editingExercise === currentExercise ? (
+                            <Input
+                              value={tempWeight}
+                              onChange={(e) =>
+                                setTempWeight(Number(e.target.value))
+                              }
+                              onBlur={() => {
+                                updateExercise(
+                                  currentExercise,
+                                  tempWeight,
+                                  tempReps
+                                );
+                                setEditingExercise(null);
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  updateExercise(
+                                    currentExercise,
+                                    tempWeight,
+                                    tempReps
+                                  );
+                                  setEditingExercise(null);
+                                }
+                              }}
+                              type="number"
+                              w="80px"
+                              textAlign="center"
+                              autoFocus
+                            />
+                          ) : (
+                            <Text
+                              fontSize="lg"
+                              color="text.primary"
+                              fontWeight="bold"
+                              cursor="pointer"
+                              onClick={() => {
+                                setEditingExercise(currentExercise);
+                                setTempWeight(
+                                  exercises[currentExercise]?.weight || 0
+                                );
+                                setTempReps(
+                                  exercises[currentExercise]?.reps || 0
+                                );
+                              }}
+                              _hover={{ color: "accent.primary" }}
+                            >
+                              {exercises[currentExercise]?.weight || 0} kg
+                            </Text>
+                          )}
+                        </Box>
+                        <Box>
+                          <Text fontSize="sm" color="text.secondary" mb={1}>
+                            Wiederholungen
+                          </Text>
+                          {editingExercise === currentExercise ? (
+                            <Input
+                              value={tempReps}
+                              onChange={(e) =>
+                                setTempReps(Number(e.target.value))
+                              }
+                              onBlur={() => {
+                                updateExercise(
+                                  currentExercise,
+                                  tempWeight,
+                                  tempReps
+                                );
+                                setEditingExercise(null);
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  updateExercise(
+                                    currentExercise,
+                                    tempWeight,
+                                    tempReps
+                                  );
+                                  setEditingExercise(null);
+                                }
+                              }}
+                              type="number"
+                              w="80px"
+                              textAlign="center"
+                            />
+                          ) : (
+                            <Text
+                              fontSize="lg"
+                              color="text.primary"
+                              fontWeight="bold"
+                              cursor="pointer"
+                              onClick={() => {
+                                setEditingExercise(currentExercise);
+                                setTempWeight(
+                                  exercises[currentExercise]?.weight || 0
+                                );
+                                setTempReps(
+                                  exercises[currentExercise]?.reps || 0
+                                );
+                              }}
+                              _hover={{ color: "accent.primary" }}
+                            >
+                              {exercises[currentExercise]?.reps || 0}
+                            </Text>
+                          )}
+                        </Box>
+                      </Stack>
+                    </Box>
+
+                    {/* Completed Sets Display */}
+                    <Box>
+                      <Text fontSize="sm" color="text.secondary" mb={2}>
+                        Sets absolviert:{" "}
+                        {exerciseSets[currentExercise]?.length || 0}
+                      </Text>
+
+                      {exerciseSets[currentExercise] &&
+                        exerciseSets[currentExercise].length > 0 && (
+                          <Stack gap={2}>
+                            {exerciseSets[currentExercise].map(
+                              (set, setIndex) => (
+                                <Box
+                                  key={setIndex}
+                                  p={2}
+                                  bg="bg.tertiary"
+                                  rounded="md"
+                                  borderWidth="1px"
+                                  borderColor="border"
+                                >
+                                  <Stack
+                                    direction="row"
+                                    justify="space-between"
+                                    align="center"
+                                  >
+                                    <Text fontSize="sm" color="text.primary">
+                                      Set {setIndex + 1}: {set.weight}kg ×{" "}
+                                      {set.reps} Wdh.
+                                    </Text>
+                                    <Stack direction="row" gap={2}>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        color="blue.400"
+                                        onClick={() => {
+                                          const newWeight = prompt(
+                                            `Neues Gewicht für Set ${
+                                              setIndex + 1
+                                            }:`,
+                                            set.weight.toString()
+                                          );
+                                          const newReps = prompt(
+                                            `Neue Wiederholungen für Set ${
+                                              setIndex + 1
+                                            }:`,
+                                            set.reps.toString()
+                                          );
+                                          if (newWeight && newReps) {
+                                            editSet(
+                                              currentExercise,
+                                              setIndex,
+                                              Number(newReps),
+                                              Number(newWeight)
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        ✏️
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        color="red.400"
+                                        onClick={() =>
+                                          deleteSet(currentExercise, setIndex)
+                                        }
+                                      >
+                                        🗑️
+                                      </Button>
+                                    </Stack>
+                                  </Stack>
+                                </Box>
+                              )
+                            )}
+                          </Stack>
+                        )}
+
+                      <Progress.Root
+                        value={
+                          ((exerciseSets[currentExercise]?.length || 0) / 3) *
+                          100
+                        }
+                        size="lg"
+                        colorPalette="green"
+                        mt={2}
+                      >
+                        <Progress.Track bg="bg.tertiary">
+                          <Progress.Range bg="green.500" />
+                        </Progress.Track>
+                      </Progress.Root>
+                    </Box>
+                  </Stack>
                 </Box>
 
                 {/* Workout Controls */}
-                <Stack direction="row" gap={4} justify="center">
+                <Stack direction="row" gap={4} justify="center" wrap="wrap">
                   {!isWorkoutActive ? (
                     <Button
                       size="lg"
@@ -146,11 +408,50 @@ const LiveWorkout = () => {
                     <>
                       <Button
                         size="lg"
+                        bg="green.500"
+                        color="white"
+                        _hover={{ bg: "green.600" }}
+                        px={6}
+                        onClick={completeSet}
+                      >
+                        ✅ Set abgeschlossen
+                      </Button>
+                      <Button
+                        size="lg"
+                        bg="gray.500"
+                        color="white"
+                        _hover={{ bg: "gray.600" }}
+                        px={6}
+                        onClick={previousExercise}
+                        disabled={currentExercise === 0}
+                      >
+                        ⬅️ Zurück
+                      </Button>
+                      <Button
+                        size="lg"
+                        bg="blue.500"
+                        color="white"
+                        _hover={{ bg: "blue.600" }}
+                        px={6}
+                        onClick={nextExercise}
+                      >
+                        ➡️ Nächste Übung
+                      </Button>
+                      <Button
+                        size="lg"
                         bg="yellow.500"
                         color="white"
                         _hover={{ bg: "yellow.600" }}
                         px={6}
-                        onClick={pauseWorkout}
+                        onClick={() => {
+                          const pauseTime = prompt(
+                            "Pause-Zeit in Sekunden:",
+                            "30"
+                          );
+                          if (pauseTime) {
+                            pauseWorkout(Number(pauseTime));
+                          }
+                        }}
                       >
                         ⏸️ Pause
                       </Button>
@@ -181,10 +482,10 @@ const LiveWorkout = () => {
             >
               <Stack gap={4}>
                 <Heading size="md" color="text.primary">
-                  Workout Fortschritt
+                  Workout Fortschritt (Übungen)
                 </Heading>
                 <Progress.Root
-                  value={progressPercentage}
+                  value={workoutProgressPercentage}
                   size="lg"
                   colorPalette="orange"
                 >
@@ -193,7 +494,8 @@ const LiveWorkout = () => {
                   </Progress.Track>
                 </Progress.Root>
                 <Text color="text.secondary" textAlign="center">
-                  Absolvierte Sets: {sets}
+                  Abgeschlossene Übungen: {completedExercises.size} /{" "}
+                  {exercises.length}
                 </Text>
               </Stack>
             </Box>
@@ -215,7 +517,7 @@ const LiveWorkout = () => {
               <Stack gap={3}>
                 {exercises.map((exercise, index) => {
                   const isActive = index === currentExercise;
-                  const isCompleted = index < currentExercise;
+                  const isCompleted = completedExercises.has(index);
 
                   return (
                     <Box
@@ -250,7 +552,16 @@ const LiveWorkout = () => {
                             color={isActive ? "white" : "text.secondary"}
                             fontSize="xs"
                           >
-                            {exercise.duration}s
+                            {exercise.weight > 0
+                              ? `${exercise.weight}kg`
+                              : "Körpergewicht"}{" "}
+                            • {exercise.reps} Wdh.
+                          </Text>
+                          <Text
+                            color={isActive ? "white" : "text.secondary"}
+                            fontSize="xs"
+                          >
+                            Sets: {exerciseSets[index]?.length || 0}
                           </Text>
                         </Stack>
                         <Text fontSize="lg">
@@ -262,41 +573,62 @@ const LiveWorkout = () => {
                 })}
               </Stack>
             </Box>
-
-            {/* Workout Stats */}
-            <Box
-              p={6}
-              bg="bg.secondary"
-              borderColor="border"
-              borderWidth="1px"
-              rounded="lg"
-            >
-              <Heading size="md" color="text.primary" mb={4}>
-                Statistiken
-              </Heading>
-              <Grid templateColumns="1fr" gap={4}>
-                <Box textAlign="center" p={4} bg="bg.tertiary" rounded="md">
-                  <Text fontSize="2xl">💪</Text>
-                  <Text fontSize="sm" color="text.secondary">
-                    Energie Level
-                  </Text>
-                </Box>
-                <Box textAlign="center" p={4} bg="bg.tertiary" rounded="md">
-                  <Text fontSize="2xl">🔥</Text>
-                  <Text fontSize="sm" color="text.secondary">
-                    Kalorien
-                  </Text>
-                </Box>
-                <Box textAlign="center" p={4} bg="bg.tertiary" rounded="md">
-                  <Text fontSize="2xl">⏱️</Text>
-                  <Text fontSize="sm" color="text.secondary">
-                    Zeit aktiv
-                  </Text>
-                </Box>
-              </Grid>
-            </Box>
           </Stack>
         </Grid>
+
+        {/* Pause Timer Popup */}
+        {isPauseModalOpen && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            width="100vw"
+            height="100vh"
+            bg="rgba(0, 0, 0, 0.8)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="9999"
+          >
+            <Box
+              bg="bg.secondary"
+              p={8}
+              rounded="lg"
+              borderColor="accent.primary"
+              borderWidth="2px"
+              textAlign="center"
+              minW="300px"
+            >
+              <Stack gap={6}>
+                <Heading size="lg" color="text.primary">
+                  Pause
+                </Heading>
+                <Text
+                  fontSize="4xl"
+                  fontWeight="bold"
+                  color="accent.primary"
+                  fontFamily="mono"
+                >
+                  {formatTime(pauseTimer)}
+                </Text>
+                <Text color="text.secondary">
+                  Das Workout wird automatisch fortgesetzt
+                </Text>
+                <Button
+                  bg="accent.primary"
+                  color="white"
+                  _hover={{ bg: "accent.secondary" }}
+                  onClick={() => {
+                    setIsPauseModalOpen(false);
+                    setIsWorkoutActive(true);
+                  }}
+                >
+                  Pause beenden
+                </Button>
+              </Stack>
+            </Box>
+          </Box>
+        )}
       </Container>
     </Box>
   );
