@@ -715,7 +715,7 @@ const Trainingsplan = () => {
                                   flex="1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    window.location.href = "/live-workout";
+                                    window.location.href = `/live-workout?dayId=${day.id}`;
                                   }}
                                 >
                                   🏃‍♂️ Training starten

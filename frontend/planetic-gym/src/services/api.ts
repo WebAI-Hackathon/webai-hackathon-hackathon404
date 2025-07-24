@@ -95,6 +95,31 @@ class ApiService {
   async getWorkingDay(dayId: number): Promise<WorkingDay> {
     return this.request(`/api/training/day/${dayId}`);
   }
+
+  // Update methods for live workout
+  async updateWorkingDay(dayId: number, updates: {
+    title?: string;
+    description?: string;
+    sets_completed?: number;
+  }): Promise<WorkingDay> {
+    return this.request(`/api/training/day/${dayId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async updateExercise(exerciseId: number, updates: {
+    title?: string;
+    description?: string;
+    sets_completed?: number;
+    first_set_weight?: number;
+    first_set_reps?: number;
+  }): Promise<Exercise> {
+    return this.request(`/api/training/exercise/${exerciseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
 }
 
 export const apiService = new ApiService();

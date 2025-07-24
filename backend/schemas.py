@@ -13,6 +13,13 @@ class ExerciseBase(BaseModel):
 class ExerciseCreate(ExerciseBase):
     pass
 
+class ExerciseUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    sets_completed: Optional[int] = None
+    first_set_weight: Optional[float] = None
+    first_set_reps: Optional[int] = None
+
 class ExerciseRead(ExerciseBase):
     id: int
     
@@ -29,6 +36,11 @@ class WorkingDayBase(BaseModel):
 class WorkingDayCreate(WorkingDayBase):
     plan_id: int
     exercise_ids: Optional[List[int]] = []
+
+class WorkingDayUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    sets_completed: Optional[int] = None
 
 class WorkingDayRead(WorkingDayBase):
     id: int

@@ -85,6 +85,49 @@ def get_day(day_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Working day not found")
     return day
 
+# Update WorkingDay (for completed sets)
+@router.put("/day/{day_id}", response_model=schemas.WorkingDayRead)
+def update_day(day_id: int, day_update: schemas.WorkingDayUpdate, db: Session = Depends(get_db)):
+    db_day = db.query(models.WorkingDay).filter(models.WorkingDay.id == day_id).first()
+    if not db_day:
+        raise HTTPException(status_code=404, detail="Working day not found")
+    
+    for field, value in day_update.dict(exclude_unset=True).items():
+        setattr(db_day, field, value)
+    
+    db.commit()
+    db.refresh(db_day)
+    return db_day
+
+# Update Exercise (for completed sets and workout results)
+@router.put("/exercise/{exercise_id}", response_model=schemas.ExerciseRead)
+def update_exercise(exercise_id: int, exercise_update: schemas.ExerciseUpdate, db: Session = Depends(get_db)):
+    db_exercise = db.query(models.Exercise).filter(models.Exercise.id == exercise_id).first()
+    if not db_exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    
+    for field, value in exercise_update.dict(exclude_unset=True).items():
+        setattr(db_exercise, field, value)
+    
+    # Update statistics if this was a workout completion
+    if exercise_update.sets_completed is not None or exercise_update.first_set_weight is not None:
+        stats = db.query(models.ExerciseStatistics).filter(
+            models.ExerciseStatistics.exercise_id == exercise_id
+        ).first()
+        
+        if not stats:
+            stats = models.ExerciseStatistics(exercise_id=exercise_id)
+            db.add(stats)
+        
+        # Update total workouts if sets were completed
+        if exercise_update.sets_completed is not None and exercise_update.sets_completed > 0:
+            stats.total_workouts = (stats.total_workouts or 0) + 1
+            stats.last_workout_date = func.now()
+    
+    db.commit()
+    db.refresh(db_exercise)
+    return db_exercise
+
 # === Statistics ===
 @router.get("/statistics/", response_model=schemas.OverallStatistics)
 def get_statistics(db: Session = Depends(get_db)):

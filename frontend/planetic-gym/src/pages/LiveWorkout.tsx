@@ -8,10 +8,34 @@ import {
   Grid,
   Stack,
   Progress,
-  Badge,
   Input,
+  Spinner,
+  Flex,
 } from "@chakra-ui/react";
 import { Tool } from "../components/Tool";
+import { apiService } from "../services/api";
+import type { WorkingDay, Exercise } from "../services/api";
+
+// Frontend Types für Kompatibilität mit der UI
+interface FrontendExercise {
+  id?: number;
+  name: string;
+  repetitions: number;
+  weight: number;
+}
+
+interface WorkoutSession {
+  dayId?: number;
+  dayTitle?: string;
+  totalSetsCompleted?: number;
+  exerciseResults: {
+    [exerciseId: number]: {
+      setsCompleted: number;
+      lastWeight?: number;
+      lastReps?: number;
+    };
+  };
+}
 
 const LiveWorkout = () => {
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
@@ -24,16 +48,120 @@ const LiveWorkout = () => {
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(
     new Set()
   );
-  const [exercises, setExercises] = useState([
-    { name: "Jumping Jacks", weight: 0, reps: 30 },
-    { name: "Push-ups", weight: 0, reps: 15 },
-    { name: "Squats", weight: 20, reps: 12 },
-    { name: "Plank", weight: 0, reps: 1 },
-    { name: "Burpees", weight: 0, reps: 10 },
+
+  // Database related state
+  const [workingDay, setWorkingDay] = useState<WorkingDay | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [workoutSession, setWorkoutSession] = useState<WorkoutSession>({
+    exerciseResults: {},
+  });
+
+  // Mock exercises (fallback)
+  const [exercises, setExercises] = useState<FrontendExercise[]>([
+    { name: "Jumping Jacks", weight: 0, repetitions: 30 },
+    { name: "Push-ups", weight: 0, repetitions: 15 },
+    { name: "Squats", weight: 20, repetitions: 12 },
+    { name: "Plank", weight: 0, repetitions: 1 },
+    { name: "Burpees", weight: 0, repetitions: 10 },
   ]);
+
   const [editingExercise, setEditingExercise] = useState<number | null>(null);
   const [tempWeight, setTempWeight] = useState(0);
   const [tempReps, setTempReps] = useState(0);
+
+  // Helper functions
+  const convertBackendToFrontend = (
+    exercises: Exercise[]
+  ): FrontendExercise[] => {
+    return exercises.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.title,
+      repetitions: exercise.first_set_reps || 10,
+      weight: exercise.first_set_weight || 0,
+    }));
+  };
+
+  // Load workout from database if dayId is provided
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const dayId = urlParams.get("dayId");
+
+    if (dayId) {
+      loadWorkingDay(parseInt(dayId));
+    }
+  }, []);
+
+  const loadWorkingDay = async (dayId: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log("Loading working day:", dayId);
+      const day = await apiService.getWorkingDay(dayId);
+      console.log("Loaded working day:", day);
+
+      setWorkingDay(day);
+      setWorkoutSession({
+        dayId: day.id,
+        dayTitle: day.title,
+        totalSetsCompleted: 0,
+        exerciseResults: {},
+      });
+
+      // Convert backend exercises to frontend format
+      if (day.exercises && day.exercises.length > 0) {
+        const frontendExercises = convertBackendToFrontend(day.exercises);
+        setExercises(frontendExercises);
+        console.log("Converted exercises:", frontendExercises);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Fehler beim Laden des Trainingstags"
+      );
+      console.error("Error loading working day:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Save workout results to database
+  const saveWorkoutResults = async () => {
+    if (!workingDay || !workoutSession.dayId) return;
+
+    try {
+      // Calculate total sets completed across all exercises
+      const totalSets = Object.values(exerciseSets).reduce(
+        (total, sets) => total + sets.length,
+        0
+      );
+
+      // Update working day
+      await apiService.updateWorkingDay(workoutSession.dayId, {
+        sets_completed: totalSets,
+      });
+
+      // Update each exercise with results
+      for (const [exerciseIndex, sets] of Object.entries(exerciseSets)) {
+        const exercise = exercises[parseInt(exerciseIndex)];
+        if (exercise?.id && sets.length > 0) {
+          const lastSet = sets[sets.length - 1];
+          await apiService.updateExercise(exercise.id, {
+            sets_completed: sets.length,
+            first_set_weight: lastSet.weight,
+            first_set_reps: lastSet.reps,
+          });
+        }
+      }
+
+      console.log("Workout results saved successfully!");
+    } catch (err) {
+      console.error("Error saving workout results:", err);
+      setError("Fehler beim Speichern der Trainingsergebnisse");
+    }
+  };
 
   // Pause timer effect
   useEffect(() => {
@@ -60,10 +188,15 @@ const LiveWorkout = () => {
     setIsPauseModalOpen(true);
   };
 
-  const stopWorkout = () => {
+  const stopWorkout = async () => {
     setIsWorkoutActive(false);
     setCurrentExercise(0);
     setIsPauseModalOpen(false);
+
+    // Save results to database if we have a working day
+    if (workingDay && Object.keys(exerciseSets).length > 0) {
+      await saveWorkoutResults();
+    }
   };
 
   const completeSet = () => {
@@ -72,7 +205,7 @@ const LiveWorkout = () => {
       newSets[currentExercise] = [];
     }
     newSets[currentExercise].push({
-      reps: exercises[currentExercise]?.reps || 0,
+      reps: exercises[currentExercise]?.repetitions || 0,
       weight: exercises[currentExercise]?.weight || 0,
     });
     setExerciseSets(newSets);
@@ -87,8 +220,14 @@ const LiveWorkout = () => {
       const nextIdx = currentExercise + 1;
       setCurrentExercise(nextIdx);
     } else {
+      // Workout completed
       setIsWorkoutActive(false);
       setCurrentExercise(0);
+
+      // Save results automatically when workout is completed
+      if (workingDay) {
+        saveWorkoutResults();
+      }
     }
   };
 
@@ -106,7 +245,7 @@ const LiveWorkout = () => {
 
   const updateExercise = (index: number, weight: number, reps: number) => {
     const newExercises = [...exercises];
-    newExercises[index] = { ...newExercises[index], weight, reps };
+    newExercises[index] = { ...newExercises[index], weight, repetitions: reps };
     setExercises(newExercises);
   };
 
@@ -142,7 +281,7 @@ const LiveWorkout = () => {
   const workoutProgressPercentage =
     (completedExercises.size / exercises.length) * 100;
 
-  // VOIX Tool Handlers
+  // VOIX Tool Handlers (behalten für Kompatibilität)
   const handleStartWorkout = (_event: Event) => {
     console.log("VOIX: Starting workout");
     startWorkout();
@@ -200,6 +339,15 @@ const LiveWorkout = () => {
     }
   };
 
+  const handleLoadWorkingDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { dayId } = details;
+    console.log("VOIX: Loading working day", dayId);
+    if (dayId) {
+      loadWorkingDay(parseInt(dayId));
+    }
+  };
+
   const handleEditSet = (event: Event) => {
     const details = (event as CustomEvent).detail;
     const { exerciseIndex, setIndex, weight, reps } = details;
@@ -244,7 +392,7 @@ const LiveWorkout = () => {
         newSets[exerciseIndex] = [];
       }
       newSets[exerciseIndex].push({
-        reps: reps || exercises[exerciseIndex]?.reps || 0,
+        reps: reps || exercises[exerciseIndex]?.repetitions || 0,
         weight: weight || exercises[exerciseIndex]?.weight || 0,
       });
       setExerciseSets(newSets);
@@ -273,7 +421,7 @@ const LiveWorkout = () => {
       // Füge die angegebene Anzahl von Sets hinzu
       for (let i = 0; i < count; i++) {
         newSets[exerciseIndex].push({
-          reps: reps || exercises[exerciseIndex]?.reps || 0,
+          reps: reps || exercises[exerciseIndex]?.repetitions || 0,
           weight: weight || exercises[exerciseIndex]?.weight || 0,
         });
       }
@@ -295,7 +443,7 @@ const LiveWorkout = () => {
       // Füge die angegebene Anzahl von Sets zur aktuellen Übung hinzu
       for (let i = 0; i < count; i++) {
         newSets[currentExercise].push({
-          reps: exercises[currentExercise]?.reps || 0,
+          reps: exercises[currentExercise]?.repetitions || 0,
           weight: exercises[currentExercise]?.weight || 0,
         });
       }
@@ -333,7 +481,7 @@ const LiveWorkout = () => {
       // Füge alle angegebenen Sets hinzu
       sets.forEach((set: { weight?: number; reps?: number }) => {
         newSets[exerciseIndex].push({
-          reps: set.reps || exercises[exerciseIndex]?.reps || 0,
+          reps: set.reps || exercises[exerciseIndex]?.repetitions || 0,
           weight: set.weight || exercises[exerciseIndex]?.weight || 0,
         });
       });
@@ -399,6 +547,14 @@ const LiveWorkout = () => {
       </context>
 
       {/* @ts-ignore */}
+      <context name="workingDay">
+        {workingDay
+          ? `Training aus der Datenbank geladen: ${workingDay.title} (ID: ${workingDay.id})`
+          : "Kein Training aus der Datenbank geladen (Mock-Übungen werden verwendet)"}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
       <context name="currentExerciseSets">
         Aktuelle Übung ({currentExercise}):{" "}
         {exercises[currentExercise]?.name || "keine"}. Abgeschlossene Sets:{" "}
@@ -417,6 +573,20 @@ const LiveWorkout = () => {
       />
 
       <Tool
+        name="load_working_day"
+        description="Lädt einen Trainingstag aus der Datenbank"
+        onCall={handleLoadWorkingDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="number"
+          required
+          description="ID des Trainingstags aus der Datenbank"
+        />
+      </Tool>
+
+      <Tool
         name="pause_workout"
         description="Pausiert das Workout für eine bestimmte Zeit"
         onCall={handlePauseWorkout}
@@ -431,7 +601,7 @@ const LiveWorkout = () => {
 
       <Tool
         name="stop_workout"
-        description="Stoppt das Workout komplett"
+        description="Stoppt das Workout komplett und speichert die Ergebnisse in der Datenbank"
         onCall={handleStopWorkout}
       />
 
@@ -668,6 +838,7 @@ const LiveWorkout = () => {
           description="Name oder Teil des Namens der Übung (z.B. 'squats', 'push-ups')"
         />
       </Tool>
+
       <Container maxW="6xl">
         {/* Workout Header */}
         <Stack gap={4} textAlign="center" mb={12}>
@@ -675,431 +846,510 @@ const LiveWorkout = () => {
             🏃‍♂️ Live Workout
           </Heading>
           <Text fontSize="lg" color="text.secondary">
-            Folge dem Timer und gib dein Bestes!
+            {workingDay
+              ? `Training: ${workingDay.title}`
+              : "Folge dem Timer und gib dein Bestes!"}
           </Text>
+
+          {/* Database status */}
+          {workingDay ? (
+            <Text fontSize="sm" color="green.600">
+              ✅ Training aus der Datenbank geladen (Ergebnisse werden
+              gespeichert)
+            </Text>
+          ) : (
+            <Flex justify="center" gap={4} align="center">
+              <Text fontSize="sm" color="orange.600">
+                ⚠️ Mock-Training (nicht aus der Datenbank)
+              </Text>
+              <Button
+                size="sm"
+                bg="accent.primary"
+                color="white"
+                _hover={{ bg: "accent.secondary" }}
+                onClick={() => {
+                  const dayId = prompt(
+                    "Trainingstag-ID aus der Datenbank eingeben:"
+                  );
+                  if (dayId) {
+                    loadWorkingDay(parseInt(dayId));
+                  }
+                }}
+              >
+                📋 Training aus Datenbank laden
+              </Button>
+            </Flex>
+          )}
         </Stack>
 
-        <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={8}>
-          {/* Main Workout Display */}
-          <Box>
-            {/* Current Exercise */}
-            <Box
-              p={8}
-              bg="bg.secondary"
-              borderColor="accent.primary"
-              borderWidth="2px"
-              rounded="lg"
-              textAlign="center"
-              mb={6}
-            >
-              <Stack gap={6}>
-                <Stack gap={2}>
-                  <Heading size="xl" color="text.primary">
-                    {exercises[currentExercise]?.name || "Bereit?"}
-                  </Heading>
-                </Stack>
-
-                {/* Exercise Details */}
-                <Box>
-                  <Stack gap={4}>
-                    <Box>
-                      <Stack
-                        direction="row"
-                        gap={4}
-                        justify="center"
-                        align="center"
-                      >
-                        <Box>
-                          <Text fontSize="sm" color="text.secondary" mb={1}>
-                            Gewicht (kg)
-                          </Text>
-                          {editingExercise === currentExercise ? (
-                            <Input
-                              value={tempWeight}
-                              onChange={(e) =>
-                                setTempWeight(Number(e.target.value))
-                              }
-                              onBlur={() => {
-                                updateExercise(
-                                  currentExercise,
-                                  tempWeight,
-                                  tempReps
-                                );
-                                setEditingExercise(null);
-                              }}
-                              onKeyPress={(e) => {
-                                if (e.key === "Enter") {
-                                  updateExercise(
-                                    currentExercise,
-                                    tempWeight,
-                                    tempReps
-                                  );
-                                  setEditingExercise(null);
-                                }
-                              }}
-                              type="number"
-                              w="80px"
-                              textAlign="center"
-                              autoFocus
-                            />
-                          ) : (
-                            <Text
-                              fontSize="lg"
-                              color="text.primary"
-                              fontWeight="bold"
-                              cursor="pointer"
-                              onClick={() => {
-                                setEditingExercise(currentExercise);
-                                setTempWeight(
-                                  exercises[currentExercise]?.weight || 0
-                                );
-                                setTempReps(
-                                  exercises[currentExercise]?.reps || 0
-                                );
-                              }}
-                              _hover={{ color: "accent.primary" }}
-                            >
-                              {exercises[currentExercise]?.weight || 0} kg
-                            </Text>
-                          )}
-                        </Box>
-                        <Box>
-                          <Text fontSize="sm" color="text.secondary" mb={1}>
-                            Wiederholungen
-                          </Text>
-                          {editingExercise === currentExercise ? (
-                            <Input
-                              value={tempReps}
-                              onChange={(e) =>
-                                setTempReps(Number(e.target.value))
-                              }
-                              onBlur={() => {
-                                updateExercise(
-                                  currentExercise,
-                                  tempWeight,
-                                  tempReps
-                                );
-                                setEditingExercise(null);
-                              }}
-                              onKeyPress={(e) => {
-                                if (e.key === "Enter") {
-                                  updateExercise(
-                                    currentExercise,
-                                    tempWeight,
-                                    tempReps
-                                  );
-                                  setEditingExercise(null);
-                                }
-                              }}
-                              type="number"
-                              w="80px"
-                              textAlign="center"
-                            />
-                          ) : (
-                            <Text
-                              fontSize="lg"
-                              color="text.primary"
-                              fontWeight="bold"
-                              cursor="pointer"
-                              onClick={() => {
-                                setEditingExercise(currentExercise);
-                                setTempWeight(
-                                  exercises[currentExercise]?.weight || 0
-                                );
-                                setTempReps(
-                                  exercises[currentExercise]?.reps || 0
-                                );
-                              }}
-                              _hover={{ color: "accent.primary" }}
-                            >
-                              {exercises[currentExercise]?.reps || 0}
-                            </Text>
-                          )}
-                        </Box>
-                      </Stack>
-                    </Box>
-
-                    {/* Completed Sets Display */}
-                    <Box>
-                      <Text fontSize="sm" color="text.secondary" mb={2}>
-                        Sets absolviert:{" "}
-                        {exerciseSets[currentExercise]?.length || 0}
-                      </Text>
-
-                      {exerciseSets[currentExercise] &&
-                        exerciseSets[currentExercise].length > 0 && (
-                          <Stack gap={2}>
-                            {exerciseSets[currentExercise].map(
-                              (set, setIndex) => (
-                                <Box
-                                  key={setIndex}
-                                  p={2}
-                                  bg="bg.tertiary"
-                                  rounded="md"
-                                  borderWidth="1px"
-                                  borderColor="border"
-                                >
-                                  <Stack
-                                    direction="row"
-                                    justify="space-between"
-                                    align="center"
-                                  >
-                                    <Text fontSize="sm" color="text.primary">
-                                      Set {setIndex + 1}: {set.weight}kg ×{" "}
-                                      {set.reps} Wdh.
-                                    </Text>
-                                    <Stack direction="row" gap={2}>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        color="blue.400"
-                                        onClick={() => {
-                                          const newWeight = prompt(
-                                            `Neues Gewicht für Set ${
-                                              setIndex + 1
-                                            }:`,
-                                            set.weight.toString()
-                                          );
-                                          const newReps = prompt(
-                                            `Neue Wiederholungen für Set ${
-                                              setIndex + 1
-                                            }:`,
-                                            set.reps.toString()
-                                          );
-                                          if (newWeight && newReps) {
-                                            editSet(
-                                              currentExercise,
-                                              setIndex,
-                                              Number(newReps),
-                                              Number(newWeight)
-                                            );
-                                          }
-                                        }}
-                                      >
-                                        ✏️
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        color="red.400"
-                                        onClick={() =>
-                                          deleteSet(currentExercise, setIndex)
-                                        }
-                                      >
-                                        🗑️
-                                      </Button>
-                                    </Stack>
-                                  </Stack>
-                                </Box>
-                              )
-                            )}
-                          </Stack>
-                        )}
-
-                      <Progress.Root
-                        value={
-                          ((exerciseSets[currentExercise]?.length || 0) / 3) *
-                          100
-                        }
-                        size="lg"
-                        colorPalette="green"
-                        mt={2}
-                      >
-                        <Progress.Track bg="bg.tertiary">
-                          <Progress.Range bg="green.500" />
-                        </Progress.Track>
-                      </Progress.Root>
-                    </Box>
-                  </Stack>
-                </Box>
-
-                {/* Workout Controls */}
-                <Stack direction="row" gap={4} justify="center" wrap="wrap">
-                  {!isWorkoutActive ? (
-                    <Button
-                      size="lg"
-                      bg="accent.primary"
-                      color="white"
-                      _hover={{ bg: "accent.secondary" }}
-                      px={8}
-                      py={6}
-                      fontSize="lg"
-                      fontWeight="bold"
-                      onClick={startWorkout}
-                    >
-                      ▶️ Workout starten
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        size="lg"
-                        bg="green.500"
-                        color="white"
-                        _hover={{ bg: "green.600" }}
-                        px={6}
-                        onClick={completeSet}
-                      >
-                        ✅ Set abgeschlossen
-                      </Button>
-                      <Button
-                        size="lg"
-                        bg="gray.500"
-                        color="white"
-                        _hover={{ bg: "gray.600" }}
-                        px={6}
-                        onClick={previousExercise}
-                        disabled={currentExercise === 0}
-                      >
-                        ⬅️ Zurück
-                      </Button>
-                      <Button
-                        size="lg"
-                        bg="blue.500"
-                        color="white"
-                        _hover={{ bg: "blue.600" }}
-                        px={6}
-                        onClick={nextExercise}
-                      >
-                        ➡️ Nächste Übung
-                      </Button>
-                      <Button
-                        size="lg"
-                        bg="yellow.500"
-                        color="white"
-                        _hover={{ bg: "yellow.600" }}
-                        px={6}
-                        onClick={() => {
-                          const pauseTime = prompt(
-                            "Pause-Zeit in Sekunden:",
-                            "30"
-                          );
-                          if (pauseTime) {
-                            pauseWorkout(Number(pauseTime));
-                          }
-                        }}
-                      >
-                        ⏸️ Pause
-                      </Button>
-                      <Button
-                        size="lg"
-                        bg="red.500"
-                        color="white"
-                        _hover={{ bg: "red.600" }}
-                        px={6}
-                        onClick={stopWorkout}
-                      >
-                        ⏹️ Stop
-                      </Button>
-                    </>
-                  )}
-                </Stack>
-              </Stack>
-            </Box>
-
-            {/* Workout Progress */}
-            <Box
-              p={6}
-              bg="bg.secondary"
-              borderColor="border"
-              borderWidth="1px"
-              rounded="lg"
-              mb={6}
-            >
-              <Stack gap={4}>
-                <Heading size="md" color="text.primary">
-                  Workout Fortschritt (Übungen)
-                </Heading>
-                <Progress.Root
-                  value={workoutProgressPercentage}
-                  size="lg"
-                  colorPalette="orange"
-                >
-                  <Progress.Track bg="bg.tertiary">
-                    <Progress.Range bg="accent.primary" />
-                  </Progress.Track>
-                </Progress.Root>
-                <Text color="text.secondary" textAlign="center">
-                  Abgeschlossene Übungen: {completedExercises.size} /{" "}
-                  {exercises.length}
-                </Text>
-              </Stack>
-            </Box>
+        {/* Error Alert */}
+        {error && (
+          <Box
+            bg="red.50"
+            border="1px"
+            borderColor="red.200"
+            p={4}
+            mb={6}
+            borderRadius="md"
+          >
+            <Text color="red.600">{error}</Text>
           </Box>
+        )}
 
-          {/* Sidebar */}
-          <Stack gap={6}>
-            {/* Exercises List */}
-            <Box
-              p={6}
-              bg="bg.secondary"
-              borderColor="border"
-              borderWidth="1px"
-              rounded="lg"
-            >
-              <Heading size="md" color="text.primary" mb={4}>
-                Heutige Übungen
-              </Heading>
-              <Stack gap={3}>
-                {exercises.map((exercise, index) => {
-                  const isActive = index === currentExercise;
-                  const isCompleted = completedExercises.has(index);
+        {/* Loading State */}
+        {isLoading ? (
+          <Flex justify="center" py={12}>
+            <Spinner size="xl" color="accent.primary" />
+          </Flex>
+        ) : (
+          <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={8}>
+            {/* Main Workout Display */}
+            <Box>
+              {/* Current Exercise */}
+              <Box
+                p={8}
+                bg="bg.secondary"
+                borderColor="accent.primary"
+                borderWidth="2px"
+                rounded="lg"
+                textAlign="center"
+                mb={6}
+              >
+                <Stack gap={6}>
+                  <Stack gap={2}>
+                    <Heading size="xl" color="text.primary">
+                      {exercises[currentExercise]?.name || "Bereit?"}
+                    </Heading>
+                  </Stack>
 
-                  return (
-                    <Box
-                      key={index}
-                      p={4}
-                      bg={
-                        isActive
-                          ? "accent.primary"
-                          : isCompleted
-                          ? "bg.tertiary"
-                          : "bg"
-                      }
-                      borderColor={isActive ? "accent.primary" : "border"}
-                      borderWidth="1px"
-                      rounded="md"
-                      transition="all 0.3s ease"
-                    >
-                      <Stack
-                        direction="row"
-                        justify="space-between"
-                        align="center"
+                  {/* Exercise Details */}
+                  <Box>
+                    <Stack gap={4}>
+                      <Box>
+                        <Stack
+                          direction="row"
+                          gap={4}
+                          justify="center"
+                          align="center"
+                        >
+                          <Box>
+                            <Text fontSize="sm" color="text.secondary" mb={1}>
+                              Gewicht (kg)
+                            </Text>
+                            {editingExercise === currentExercise ? (
+                              <Input
+                                value={tempWeight}
+                                onChange={(e) =>
+                                  setTempWeight(Number(e.target.value))
+                                }
+                                onBlur={() => {
+                                  updateExercise(
+                                    currentExercise,
+                                    tempWeight,
+                                    tempReps
+                                  );
+                                  setEditingExercise(null);
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    updateExercise(
+                                      currentExercise,
+                                      tempWeight,
+                                      tempReps
+                                    );
+                                    setEditingExercise(null);
+                                  }
+                                }}
+                                type="number"
+                                w="80px"
+                                textAlign="center"
+                                autoFocus
+                              />
+                            ) : (
+                              <Text
+                                fontSize="lg"
+                                color="text.primary"
+                                fontWeight="bold"
+                                cursor="pointer"
+                                onClick={() => {
+                                  setEditingExercise(currentExercise);
+                                  setTempWeight(
+                                    exercises[currentExercise]?.weight || 0
+                                  );
+                                  setTempReps(
+                                    exercises[currentExercise]?.repetitions || 0
+                                  );
+                                }}
+                                _hover={{ color: "accent.primary" }}
+                              >
+                                {exercises[currentExercise]?.weight || 0} kg
+                              </Text>
+                            )}
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="text.secondary" mb={1}>
+                              Wiederholungen
+                            </Text>
+                            {editingExercise === currentExercise ? (
+                              <Input
+                                value={tempReps}
+                                onChange={(e) =>
+                                  setTempReps(Number(e.target.value))
+                                }
+                                onBlur={() => {
+                                  updateExercise(
+                                    currentExercise,
+                                    tempWeight,
+                                    tempReps
+                                  );
+                                  setEditingExercise(null);
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    updateExercise(
+                                      currentExercise,
+                                      tempWeight,
+                                      tempReps
+                                    );
+                                    setEditingExercise(null);
+                                  }
+                                }}
+                                type="number"
+                                w="80px"
+                                textAlign="center"
+                              />
+                            ) : (
+                              <Text
+                                fontSize="lg"
+                                color="text.primary"
+                                fontWeight="bold"
+                                cursor="pointer"
+                                onClick={() => {
+                                  setEditingExercise(currentExercise);
+                                  setTempWeight(
+                                    exercises[currentExercise]?.weight || 0
+                                  );
+                                  setTempReps(
+                                    exercises[currentExercise]?.repetitions || 0
+                                  );
+                                }}
+                                _hover={{ color: "accent.primary" }}
+                              >
+                                {exercises[currentExercise]?.repetitions || 0}
+                              </Text>
+                            )}
+                          </Box>
+                        </Stack>
+                      </Box>
+
+                      {/* Completed Sets Display */}
+                      <Box>
+                        <Text fontSize="sm" color="text.secondary" mb={2}>
+                          Sets absolviert:{" "}
+                          {exerciseSets[currentExercise]?.length || 0}
+                        </Text>
+
+                        {exerciseSets[currentExercise] &&
+                          exerciseSets[currentExercise].length > 0 && (
+                            <Stack gap={2}>
+                              {exerciseSets[currentExercise].map(
+                                (set, setIndex) => (
+                                  <Box
+                                    key={setIndex}
+                                    p={2}
+                                    bg="bg.tertiary"
+                                    rounded="md"
+                                    borderWidth="1px"
+                                    borderColor="border"
+                                  >
+                                    <Stack
+                                      direction="row"
+                                      justify="space-between"
+                                      align="center"
+                                    >
+                                      <Text fontSize="sm" color="text.primary">
+                                        Set {setIndex + 1}: {set.weight}kg ×{" "}
+                                        {set.reps} Wdh.
+                                      </Text>
+                                      <Stack direction="row" gap={2}>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          color="blue.400"
+                                          onClick={() => {
+                                            const newWeight = prompt(
+                                              `Neues Gewicht für Set ${
+                                                setIndex + 1
+                                              }:`,
+                                              set.weight.toString()
+                                            );
+                                            const newReps = prompt(
+                                              `Neue Wiederholungen für Set ${
+                                                setIndex + 1
+                                              }:`,
+                                              set.reps.toString()
+                                            );
+                                            if (newWeight && newReps) {
+                                              editSet(
+                                                currentExercise,
+                                                setIndex,
+                                                Number(newReps),
+                                                Number(newWeight)
+                                              );
+                                            }
+                                          }}
+                                        >
+                                          ✏️
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          color="red.400"
+                                          onClick={() =>
+                                            deleteSet(currentExercise, setIndex)
+                                          }
+                                        >
+                                          🗑️
+                                        </Button>
+                                      </Stack>
+                                    </Stack>
+                                  </Box>
+                                )
+                              )}
+                            </Stack>
+                          )}
+
+                        <Progress.Root
+                          value={
+                            ((exerciseSets[currentExercise]?.length || 0) / 3) *
+                            100
+                          }
+                          size="lg"
+                          colorPalette="green"
+                          mt={2}
+                        >
+                          <Progress.Track bg="bg.tertiary">
+                            <Progress.Range bg="green.500" />
+                          </Progress.Track>
+                        </Progress.Root>
+                      </Box>
+                    </Stack>
+                  </Box>
+
+                  {/* Workout Controls */}
+                  <Stack direction="row" gap={4} justify="center" wrap="wrap">
+                    {!isWorkoutActive ? (
+                      <Button
+                        size="lg"
+                        bg="accent.primary"
+                        color="white"
+                        _hover={{ bg: "accent.secondary" }}
+                        px={8}
+                        py={6}
+                        fontSize="lg"
+                        fontWeight="bold"
+                        onClick={startWorkout}
                       >
-                        <Stack gap={1}>
-                          <Text
-                            fontWeight="bold"
-                            color={isActive ? "white" : "text.primary"}
-                            fontSize="sm"
-                          >
-                            {exercise.name}
-                          </Text>
-                          <Text
-                            color={isActive ? "white" : "text.secondary"}
-                            fontSize="xs"
-                          >
-                            {exercise.weight > 0
-                              ? `${exercise.weight}kg`
-                              : "Körpergewicht"}{" "}
-                            • {exercise.reps} Wdh.
-                          </Text>
-                          <Text
-                            color={isActive ? "white" : "text.secondary"}
-                            fontSize="xs"
-                          >
-                            Sets: {exerciseSets[index]?.length || 0}
+                        ▶️ Workout starten
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          size="lg"
+                          bg="green.500"
+                          color="white"
+                          _hover={{ bg: "green.600" }}
+                          px={6}
+                          onClick={completeSet}
+                        >
+                          ✅ Set abgeschlossen
+                        </Button>
+                        <Button
+                          size="lg"
+                          bg="gray.500"
+                          color="white"
+                          _hover={{ bg: "gray.600" }}
+                          px={6}
+                          onClick={previousExercise}
+                          disabled={currentExercise === 0}
+                        >
+                          ⬅️ Zurück
+                        </Button>
+                        <Button
+                          size="lg"
+                          bg="blue.500"
+                          color="white"
+                          _hover={{ bg: "blue.600" }}
+                          px={6}
+                          onClick={nextExercise}
+                        >
+                          ➡️ Nächste Übung
+                        </Button>
+                        <Button
+                          size="lg"
+                          bg="yellow.500"
+                          color="white"
+                          _hover={{ bg: "yellow.600" }}
+                          px={6}
+                          onClick={() => {
+                            const pauseTime = prompt(
+                              "Pause-Zeit in Sekunden:",
+                              "30"
+                            );
+                            if (pauseTime) {
+                              pauseWorkout(Number(pauseTime));
+                            }
+                          }}
+                        >
+                          ⏸️ Pause
+                        </Button>
+                        <Button
+                          size="lg"
+                          bg="red.500"
+                          color="white"
+                          _hover={{ bg: "red.600" }}
+                          px={6}
+                          onClick={stopWorkout}
+                        >
+                          ⏹️ Stop
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
+                </Stack>
+              </Box>
+
+              {/* Workout Progress */}
+              <Box
+                p={6}
+                bg="bg.secondary"
+                borderColor="border"
+                borderWidth="1px"
+                rounded="lg"
+                mb={6}
+              >
+                <Stack gap={4}>
+                  <Heading size="md" color="text.primary">
+                    Workout Fortschritt (Übungen)
+                  </Heading>
+                  <Progress.Root
+                    value={workoutProgressPercentage}
+                    size="lg"
+                    colorPalette="orange"
+                  >
+                    <Progress.Track bg="bg.tertiary">
+                      <Progress.Range bg="accent.primary" />
+                    </Progress.Track>
+                  </Progress.Root>
+                  <Text color="text.secondary" textAlign="center">
+                    Abgeschlossene Übungen: {completedExercises.size} /{" "}
+                    {exercises.length}
+                  </Text>
+                </Stack>
+              </Box>
+            </Box>
+
+            {/* Sidebar */}
+            <Stack gap={6}>
+              {/* Exercises List */}
+              <Box
+                p={6}
+                bg="bg.secondary"
+                borderColor="border"
+                borderWidth="1px"
+                rounded="lg"
+              >
+                <Heading size="md" color="text.primary" mb={4}>
+                  Heutige Übungen
+                </Heading>
+                <Stack gap={3}>
+                  {exercises.map((exercise, index) => {
+                    const isActive = index === currentExercise;
+                    const isCompleted = completedExercises.has(index);
+
+                    return (
+                      <Box
+                        key={index}
+                        p={4}
+                        bg={
+                          isActive
+                            ? "accent.primary"
+                            : isCompleted
+                            ? "bg.tertiary"
+                            : "bg"
+                        }
+                        borderColor={isActive ? "accent.primary" : "border"}
+                        borderWidth="1px"
+                        rounded="md"
+                        transition="all 0.3s ease"
+                      >
+                        <Stack
+                          direction="row"
+                          justify="space-between"
+                          align="center"
+                        >
+                          <Stack gap={1}>
+                            <Text
+                              fontWeight="bold"
+                              color={isActive ? "white" : "text.primary"}
+                              fontSize="sm"
+                            >
+                              {exercise.name}
+                            </Text>
+                            <Text
+                              color={isActive ? "white" : "text.secondary"}
+                              fontSize="xs"
+                            >
+                              {exercise.weight > 0
+                                ? `${exercise.weight}kg`
+                                : "Körpergewicht"}{" "}
+                              • {exercise.repetitions} Wdh.
+                            </Text>
+                            <Text
+                              color={isActive ? "white" : "text.secondary"}
+                              fontSize="xs"
+                            >
+                              Sets: {exerciseSets[index]?.length || 0}
+                            </Text>
+                          </Stack>
+                          <Text fontSize="lg">
+                            {isCompleted ? "✅" : isActive ? "🔥" : "⏳"}
                           </Text>
                         </Stack>
-                        <Text fontSize="lg">
-                          {isCompleted ? "✅" : isActive ? "🔥" : "⏳"}
-                        </Text>
-                      </Stack>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            </Box>
-          </Stack>
-        </Grid>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
+
+              {/* Database info */}
+              {workingDay && (
+                <Box
+                  p={4}
+                  bg="bg.tertiary"
+                  borderColor="green.200"
+                  borderWidth="1px"
+                  rounded="lg"
+                >
+                  <Stack gap={2}>
+                    <Text fontSize="sm" fontWeight="bold" color="green.700">
+                      📊 Datenbank-Training
+                    </Text>
+                    <Text fontSize="xs" color="text.secondary">
+                      Plan-ID: {workingDay.plan_id}
+                    </Text>
+                    <Text fontSize="xs" color="text.secondary">
+                      Tag-ID: {workingDay.id}
+                    </Text>
+                    <Text fontSize="xs" color="text.secondary">
+                      Übungen: {workingDay.exercises.length}
+                    </Text>
+                  </Stack>
+                </Box>
+              )}
+            </Stack>
+          </Grid>
+        )}
 
         {/* Pause Timer Popup */}
         {isPauseModalOpen && (
