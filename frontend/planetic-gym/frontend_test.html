@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planetic Gym - Backend Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 10px 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .success {
+        color: #28a745;
+        font-weight: bold;
+      }
+      .error {
+        color: #dc3545;
+        font-weight: bold;
+      }
+      .result {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin: 10px 0;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .form-group {
+        margin: 15px 0;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+        text-align: center;
+        font-weight: bold;
+      }
+      .status.online {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.offline {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏋️‍♂️ Planetic Gym Backend Test</h1>
+
+      <div id="connectionStatus" class="status offline">
+        ❌ Backend Offline - Bitte starten Sie das Backend
+      </div>
+
+      <button onclick="testConnection()">🔄 Backend Connection testen</button>
+
+      <div class="grid">
+        <!-- Exercises Section -->
+        <div>
+          <h2>💪 Exercises</h2>
+
+          <div class="form-group">
+            <label>Exercise Name:</label>
+            <input
+              type="text"
+              id="exerciseTitle"
+              value="Bankdrücken"
+              placeholder="z.B. Bankdrücken"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Beschreibung:</label>
+            <textarea id="exerciseDesc" placeholder="Beschreibung der Übung">
+Brust-Übung mit Langhantel</textarea
+            >
+          </div>
+
+          <div class="form-group">
+            <label>Sets gemacht:</label>
+            <input type="number" id="exerciseSets" value="3" min="1" />
+          </div>
+
+          <div class="form-group">
+            <label>Gewicht (kg):</label>
+            <input type="number" id="exerciseWeight" value="60" step="0.5" />
+          </div>
+
+          <div class="form-group">
+            <label>Wiederholungen:</label>
+            <input type="number" id="exerciseReps" value="10" min="1" />
+          </div>
+
+          <button onclick="createExercise()">➕ Exercise erstellen</button>
+          <button onclick="loadExercises()">📋 Alle Exercises laden</button>
+        </div>
+
+        <!-- Plans Section -->
+        <div>
+          <h2>📅 Training Plans</h2>
+
+          <div class="form-group">
+            <label>Plan Name:</label>
+            <input
+              type="text"
+              id="planTitle"
+              value="Ganzkörper-Training"
+              placeholder="z.B. Ganzkörper-Training"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Beschreibung:</label>
+            <textarea id="planDesc" placeholder="Beschreibung des Plans">
+3x pro Woche Ganzkörper-Workout</textarea
+            >
+          </div>
+
+          <button onclick="createPlan()">➕ Plan erstellen</button>
+          <button onclick="loadPlans()">📋 Alle Pläne laden</button>
+
+          <div class="form-group">
+            <label>Plan für WorkingDay:</label>
+            <select id="planSelect">
+              <option value="">Zuerst Plan erstellen</option>
+            </select>
+          </div>
+
+          <h3>Trainingstage</h3>
+
+          <div class="form-group">
+            <label>Tag Name:</label>
+            <input
+              type="text"
+              id="dayTitle"
+              value="Montag - Push"
+              placeholder="z.B. Montag - Push"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Tag Nummer (1-7):</label>
+            <input type="number" id="dayNumber" value="1" min="1" max="7" />
+          </div>
+
+          <div class="form-group">
+            <label>Sets am Tag gemacht:</label>
+            <input type="number" id="daySets" value="9" min="1" />
+          </div>
+
+          <button onclick="createWorkingDay()">
+            ➕ Trainingstag erstellen
+          </button>
+          <button onclick="loadWorkingDays()">
+            📋 Alle Trainingstage laden
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h2>📊 Statistiken</h2>
+        <button onclick="loadStatistics()">📈 Alle Statistiken laden</button>
+        <button onclick="loadExerciseFrequency()">
+          🔢 Exercise Häufigkeit
+        </button>
+      </div>
+
+      <div id="results" class="result" style="display: none"></div>
+    </div>
+
+    <script>
+      const API_BASE = "http://127.0.0.1:8000/api/training";
+
+      let isBackendOnline = false;
+
+      // Test Backend Connection
+      async function testConnection() {
+        try {
+          const response = await fetch(`${API_BASE}/../../../`);
+          if (response.ok) {
+            updateConnectionStatus(true);
+            showResult("✅ Backend Connection erfolgreich!", "success");
+          } else {
+            throw new Error("Backend antwortet nicht");
+          }
+        } catch (error) {
+          updateConnectionStatus(false);
+          showResult(
+            `❌ Backend Connection fehlgeschlagen: ${error.message}`,
+            "error"
+          );
+        }
+      }
+
+      function updateConnectionStatus(online) {
+        isBackendOnline = online;
+        const statusDiv = document.getElementById("connectionStatus");
+        if (online) {
+          statusDiv.className = "status online";
+          statusDiv.innerHTML = "✅ Backend Online - Bereit für Tests";
+        } else {
+          statusDiv.className = "status offline";
+          statusDiv.innerHTML =
+            "❌ Backend Offline - Bitte starten Sie das Backend";
+        }
+      }
+
+      // Exercise Functions
+      async function createExercise() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        const exerciseData = {
+          title: document.getElementById("exerciseTitle").value,
+          description: document.getElementById("exerciseDesc").value,
+          sets_completed: parseInt(
+            document.getElementById("exerciseSets").value
+          ),
+          first_set_weight: parseFloat(
+            document.getElementById("exerciseWeight").value
+          ),
+          first_set_reps: parseInt(
+            document.getElementById("exerciseReps").value
+          ),
+        };
+
+        try {
+          const response = await fetch(`${API_BASE}/exercise/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(exerciseData),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            showResult(
+              `✅ Exercise erstellt!\n${JSON.stringify(result, null, 2)}`,
+              "success"
+            );
+          } else {
+            const error = await response.text();
+            showResult(`❌ Fehler beim Erstellen: ${error}`, "error");
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      async function loadExercises() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE}/exercise/`);
+          if (response.ok) {
+            const exercises = await response.json();
+            showResult(
+              `📋 Alle Exercises (${exercises.length}):\n${JSON.stringify(
+                exercises,
+                null,
+                2
+              )}`,
+              "success"
+            );
+          } else {
+            showResult(
+              `❌ Fehler beim Laden: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      // Plan Functions
+      async function createPlan() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        const planData = {
+          title: document.getElementById("planTitle").value,
+          description: document.getElementById("planDesc").value,
+        };
+
+        try {
+          const response = await fetch(`${API_BASE}/plan/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(planData),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            showResult(
+              `✅ Plan erstellt!\n${JSON.stringify(result, null, 2)}`,
+              "success"
+            );
+            loadPlansInSelect(); // Update dropdown
+          } else {
+            showResult(
+              `❌ Fehler beim Erstellen: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      async function loadPlans() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE}/plan/`);
+          if (response.ok) {
+            const plans = await response.json();
+            showResult(
+              `📋 Alle Pläne (${plans.length}):\n${JSON.stringify(
+                plans,
+                null,
+                2
+              )}`,
+              "success"
+            );
+          } else {
+            showResult(
+              `❌ Fehler beim Laden: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      async function loadPlansInSelect() {
+        try {
+          const response = await fetch(`${API_BASE}/plan/`);
+          if (response.ok) {
+            const plans = await response.json();
+            const select = document.getElementById("planSelect");
+            select.innerHTML = '<option value="">Plan auswählen</option>';
+            plans.forEach((plan) => {
+              select.innerHTML += `<option value="${plan.id}">${plan.title}</option>`;
+            });
+          }
+        } catch (error) {
+          console.error("Error loading plans:", error);
+        }
+      }
+
+      // Working Day Functions
+      async function createWorkingDay() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        const planId = document.getElementById("planSelect").value;
+        if (!planId) {
+          showResult("❌ Bitte zuerst einen Plan auswählen.", "error");
+          return;
+        }
+
+        const dayData = {
+          day_number: parseInt(document.getElementById("dayNumber").value),
+          title: document.getElementById("dayTitle").value,
+          description: "Trainingstag Beschreibung",
+          plan_id: parseInt(planId),
+          sets_completed: parseInt(document.getElementById("daySets").value),
+          exercise_ids: [], // Später können hier Exercise IDs hinzugefügt werden
+        };
+
+        try {
+          const response = await fetch(`${API_BASE}/day/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dayData),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            showResult(
+              `✅ Trainingstag erstellt!\n${JSON.stringify(result, null, 2)}`,
+              "success"
+            );
+          } else {
+            showResult(
+              `❌ Fehler beim Erstellen: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      async function loadWorkingDays() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE}/day/`);
+          if (response.ok) {
+            const days = await response.json();
+            showResult(
+              `📋 Alle Trainingstage (${days.length}):\n${JSON.stringify(
+                days,
+                null,
+                2
+              )}`,
+              "success"
+            );
+          } else {
+            showResult(
+              `❌ Fehler beim Laden: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      // Statistics Functions
+      async function loadStatistics() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE}/statistics/`);
+          if (response.ok) {
+            const stats = await response.json();
+            showResult(
+              `📊 Statistiken:\n${JSON.stringify(stats, null, 2)}`,
+              "success"
+            );
+          } else {
+            showResult(
+              `❌ Fehler beim Laden: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      async function loadExerciseFrequency() {
+        if (!isBackendOnline) {
+          showResult(
+            "❌ Backend ist offline. Bitte testen Sie zuerst die Connection.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `${API_BASE}/statistics/exercise-frequency`
+          );
+          if (response.ok) {
+            const freq = await response.json();
+            showResult(
+              `🔢 Exercise Häufigkeit:\n${JSON.stringify(freq, null, 2)}`,
+              "success"
+            );
+          } else {
+            showResult(
+              `❌ Fehler beim Laden: ${await response.text()}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          showResult(`❌ Network Error: ${error.message}`, "error");
+        }
+      }
+
+      function showResult(message, type) {
+        const resultDiv = document.getElementById("results");
+        resultDiv.style.display = "block";
+        resultDiv.className = `result ${type}`;
+        resultDiv.textContent = message;
+      }
+
+      // Test connection on page load
+      window.onload = function () {
+        testConnection();
+      };
+    </script>
+  </body>
+</html>
