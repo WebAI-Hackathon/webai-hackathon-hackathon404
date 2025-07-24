@@ -13,6 +13,7 @@ import {
   Input,
   Textarea,
 } from "@chakra-ui/react";
+import { Tool } from "../components/Tool";
 
 interface Exercise {
   name: string;
@@ -219,8 +220,300 @@ const Trainingsplan = () => {
     setEditingDay(null);
   };
 
+  // VOIX Tool Handlers
+  const handleCreateWeek = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const newWeek: TrainingWeek = {
+      id: `week${Date.now()}`,
+      name: details.name || `Woche ${trainingWeeks.length + 1}`,
+      description: details.description || "Neue Trainingswoche",
+      days: [],
+    };
+    setTrainingWeeks([...trainingWeeks, newWeek]);
+  };
+
+  const handleCreateDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const newDay: TrainingDay = {
+      id: `day${Date.now()}`,
+      name:
+        details.name ||
+        `Tag ${
+          trainingWeeks.find((w) => w.id === details.weekId)?.days.length! + 1
+        }`,
+      focus: details.focus || "Ganzkörper",
+      exercises: details.exercises || [],
+      duration: details.duration || 30,
+    };
+
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) =>
+        week.id === details.weekId
+          ? { ...week, days: [...week.days, newDay] }
+          : week
+      )
+    );
+  };
+
+  const handleEditDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) => ({
+        ...week,
+        days: week.days.map((day) =>
+          day.id === details.dayId
+            ? {
+                ...day,
+                name: details.name || day.name,
+                focus: details.focus || day.focus,
+                exercises: details.exercises || day.exercises,
+                duration: details.duration || day.duration,
+              }
+            : day
+        ),
+      }))
+    );
+  };
+
+  const handleDeleteDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    setTrainingWeeks((weeks) =>
+      weeks.map((week) => ({
+        ...week,
+        days: week.days.filter((day) => day.id !== details.dayId),
+      }))
+    );
+  };
+
+  const handleDeleteWeek = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    setTrainingWeeks((weeks) =>
+      weeks.filter((week) => week.id !== details.weekId)
+    );
+  };
+
+  const handleStartWorkout = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    // Navigation logic could be implemented here
+    window.location.href = `/live-workout?dayId=${details.dayId}`;
+  };
+
   return (
     <Box py={8}>
+      {/* VOIX Context Elements */}
+      {/* @ts-ignore */}
+      <context name="trainingWeeks">
+        {JSON.stringify(trainingWeeks)}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="selectedDay">
+        {selectedDay || "none"}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="appState">
+        Die App zeigt aktuell {trainingWeeks.length} Trainingswochen an.
+        {selectedDay
+          ? `Tag ${selectedDay} ist ausgewählt.`
+          : "Kein Tag ausgewählt."}
+        {showNewWeekDialog ? "Dialog für neue Woche ist geöffnet." : ""}
+        {showNewDayDialog ? "Dialog für neuen Tag ist geöffnet." : ""}
+        {showEditDayDialog ? "Dialog für Tag-Bearbeitung ist geöffnet." : ""}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* VOIX Tool Elements */}
+      <Tool
+        name="create_training_week"
+        description="Erstellt eine neue Trainingswoche mit Namen und Beschreibung"
+        onCall={handleCreateWeek}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          required
+          description="Name der neuen Trainingswoche"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="description"
+          type="string"
+          description="Beschreibung der Trainingswoche"
+        />
+      </Tool>
+
+      <Tool
+        name="create_training_day"
+        description="Erstellt einen neuen Trainingstag in einer bestimmten Woche"
+        onCall={handleCreateDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID der Woche, zu der der Tag hinzugefügt werden soll"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          required
+          description="Name des Trainingstags"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="focus"
+          type="string"
+          required
+          description="Trainingsfokus (z.B. Oberkörper, Unterkörper, Ganzkörper)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="duration"
+          type="number"
+          description="Dauer in Minuten (Standard: 30)"
+        />
+        {/* @ts-ignore */}
+        <prop name="exercises" type="array" description="Liste der Übungen">
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name der Übung"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="repetitions"
+                type="number"
+                required
+                description="Anzahl Wiederholungen"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="weight"
+                type="number"
+                description="Gewicht in kg (Standard: 0)"
+              />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
+
+      <Tool
+        name="edit_training_day"
+        description="Bearbeitet einen bestehenden Trainingstag"
+        onCall={handleEditDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID des zu bearbeitenden Trainingstags"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          description="Neuer Name des Trainingstags"
+        />
+        {/* @ts-ignore */}
+        <prop name="focus" type="string" description="Neuer Trainingsfokus" />
+        {/* @ts-ignore */}
+        <prop
+          name="duration"
+          type="number"
+          description="Neue Dauer in Minuten"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="exercises"
+          type="array"
+          description="Neue Liste der Übungen"
+        >
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name der Übung"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="repetitions"
+                type="number"
+                required
+                description="Anzahl Wiederholungen"
+              />
+              {/* @ts-ignore */}
+              <prop name="weight" type="number" description="Gewicht in kg" />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
+
+      <Tool
+        name="delete_training_day"
+        description="Löscht einen Trainingstag"
+        onCall={handleDeleteDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID des zu löschenden Trainingstags"
+        />
+      </Tool>
+
+      <Tool
+        name="delete_training_week"
+        description="Löscht eine Trainingswoche"
+        onCall={handleDeleteWeek}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID der zu löschenden Trainingswoche"
+        />
+      </Tool>
+
+      <Tool
+        name="start_workout"
+        description="Startet ein Training für einen bestimmten Tag"
+        onCall={handleStartWorkout}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID des Trainingstags, der gestartet werden soll"
+        />
+      </Tool>
+
       <Container maxW="6xl">
         <Stack gap={4} textAlign="center" mb={12}>
           <Heading size="2xl" color="text.primary">
