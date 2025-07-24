@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from "react";
 
 // Define the type for the event handler prop
 type ToolCallEventHandler = (event: Event) => void;
@@ -10,7 +10,7 @@ type ToolProps = {
   onCall: ToolCallEventHandler;
   return?: boolean;
   children?: React.ReactNode;
-} & Omit<React.HTMLAttributes<HTMLElement>, 'onCall'>;
+} & Omit<React.HTMLAttributes<HTMLElement>, "onCall">;
 
 export function Tool({
   name,
@@ -18,7 +18,7 @@ export function Tool({
   onCall,
   children,
   // Rename the 'return' prop to avoid conflict with the JS keyword
-  return: returnProp, 
+  return: returnProp,
   ...rest
 }: ToolProps) {
   const toolRef = useRef<HTMLElement | null>(null);
@@ -29,10 +29,10 @@ export function Tool({
 
     const listener = (event: Event) => onCall(event);
 
-    element.addEventListener('call', listener as EventListener);
+    element.addEventListener("call", listener as EventListener);
 
     return () => {
-      element.removeEventListener('call', listener as EventListener);
+      element.removeEventListener("call", listener as EventListener);
     };
   }, [onCall]); // Re-attach the listener if the onCall function changes
 
