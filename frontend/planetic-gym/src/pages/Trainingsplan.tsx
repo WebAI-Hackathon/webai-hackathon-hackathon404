@@ -20,6 +20,7 @@ import type { WorkingPlan } from "../services/api";
 
 // Frontend Types (für Kompatibilität mit der bestehenden UI)
 interface FrontendExercise {
+  id?: number; // Backend Exercise ID für Updates
   name: string;
   repetitions: number;
   weight: number;
@@ -76,6 +77,7 @@ const Trainingsplan = () => {
         focus: day.description || "Ganzkörper",
         duration: 30, // Default duration, kann später erweitert werden
         exercises: day.exercises.map((exercise) => ({
+          id: exercise.id, // Backend Exercise ID mitführen
           name: exercise.title,
           repetitions: exercise.first_set_reps || 10,
           weight: exercise.first_set_weight || 0,
@@ -200,27 +202,77 @@ const Trainingsplan = () => {
   const updateDay = async () => {
     if (!editingDay) return;
 
-    // Für jetzt nur Frontend State ändern, da Backend keine Update Endpoints hat
-    setTrainingWeeks((weeks) =>
-      weeks.map((week) => ({
-        ...week,
-        days: week.days.map((day) =>
-          day.id === editingDay.id
-            ? {
-                ...day,
-                name: newDayData.name || day.name,
-                focus: newDayData.focus || day.focus,
-                exercises: newDayData.exercises.filter(
-                  (ex) => ex.name.trim() !== ""
-                ),
-                duration: newDayData.duration,
-              }
-            : day
-        ),
-      }))
-    );
-    setShowEditDayDialog(false);
-    setEditingDay(null);
+    try {
+      // Update WorkingDay im Backend
+      await apiService.updateWorkingDay(parseInt(editingDay.id), {
+        title: newDayData.name || editingDay.name,
+        description: newDayData.focus || editingDay.focus,
+      });
+
+      // Sammle alle aktuellen Exercise-IDs
+      const originalExerciseIds = editingDay.exercises
+        .map((ex) => ex.id)
+        .filter((id) => id !== undefined) as number[];
+      const newExerciseIds: number[] = [];
+      const updatedExerciseIds: number[] = [];
+
+      const filteredExercises = newDayData.exercises.filter(
+        (ex) => ex.name.trim() !== ""
+      );
+
+      // Verarbeite jede Übung
+      for (const newExercise of filteredExercises) {
+        if (newExercise.id) {
+          // Bestehende Übung aktualisieren
+          await apiService.updateExercise(newExercise.id, {
+            title: newExercise.name,
+            first_set_reps: newExercise.repetitions,
+            first_set_weight: newExercise.weight,
+          });
+          updatedExerciseIds.push(newExercise.id);
+        } else {
+          // Neue Übung erstellen
+          const createdExercise = await apiService.createExercise({
+            title: newExercise.name,
+            first_set_reps: newExercise.repetitions,
+            first_set_weight: newExercise.weight,
+          });
+          if (createdExercise.id) {
+            newExerciseIds.push(createdExercise.id);
+            updatedExerciseIds.push(createdExercise.id);
+          }
+        }
+      }
+
+      // Finde entfernte Übungen (die in der ursprünglichen Liste waren, aber nicht mehr in der aktualisierten)
+      const removedExerciseIds = originalExerciseIds.filter(
+        (id) => !updatedExerciseIds.includes(id)
+      );
+
+      // Entferne Übungen vom WorkingDay
+      if (removedExerciseIds.length > 0) {
+        await apiService.removeExercisesFromDay(
+          parseInt(editingDay.id),
+          removedExerciseIds
+        );
+      }
+
+      // Füge neue Übungen zum WorkingDay hinzu
+      if (newExerciseIds.length > 0) {
+        await apiService.addExercisesToDay(
+          parseInt(editingDay.id),
+          newExerciseIds
+        );
+      }
+
+      setShowEditDayDialog(false);
+      setEditingDay(null);
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error updating day:", error);
+      setError("Fehler beim Aktualisieren des Trainingstags");
+    }
   };
 
   // VOIX Tool Handlers
@@ -237,6 +289,59 @@ const Trainingsplan = () => {
     } catch (error) {
       console.error("Error creating new week:", error);
       setError("Fehler beim Erstellen der neuen Trainingswoche");
+    }
+  };
+
+  const handleCreateCompleteTrainingPlan = async (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    try {
+      // Erstelle den Trainingsplan
+      const createdPlan = await apiService.createWorkingPlan({
+        title: details.name || `Trainingsplan ${trainingWeeks.length + 1}`,
+        description: details.description || "Neuer Trainingsplan",
+      });
+
+      if (!createdPlan.id) {
+        throw new Error("Failed to create training plan");
+      }
+
+      // Erstelle alle Tage mit ihren Übungen
+      if (details.days && details.days.length > 0) {
+        for (let dayIndex = 0; dayIndex < details.days.length; dayIndex++) {
+          const day = details.days[dayIndex];
+
+          // Erstelle Übungen für diesen Tag
+          let exerciseIds: number[] = [];
+          if (day.exercises && day.exercises.length > 0) {
+            const exercisePromises = day.exercises
+              .filter((ex: any) => ex.name && ex.name.trim() !== "")
+              .map(async (exercise: any) => {
+                return await apiService.createExercise({
+                  title: exercise.name,
+                  first_set_reps: exercise.repetitions || 10,
+                  first_set_weight: exercise.weight || 0,
+                });
+              });
+            const createdExercises = await Promise.all(exercisePromises);
+            exerciseIds = createdExercises.map((ex) => ex.id!);
+          }
+
+          // Erstelle den Trainingstag
+          await apiService.createWorkingDay({
+            day_number: dayIndex + 1,
+            title: day.name || `Tag ${dayIndex + 1}`,
+            description: day.focus || "Ganzkörper",
+            plan_id: createdPlan.id,
+            exercise_ids: exerciseIds,
+          });
+        }
+      }
+
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error creating complete training plan:", error);
+      setError("Fehler beim Erstellen des kompletten Trainingsplans");
     }
   };
 
@@ -279,24 +384,94 @@ const Trainingsplan = () => {
     }
   };
 
-  const handleEditDay = (event: Event) => {
+  const handleEditDay = async (event: Event) => {
     const details = (event as CustomEvent).detail;
-    setTrainingWeeks((weeks) =>
-      weeks.map((week) => ({
-        ...week,
-        days: week.days.map((day) =>
-          day.id === details.dayId
-            ? {
-                ...day,
-                name: details.name || day.name,
-                focus: details.focus || day.focus,
-                exercises: details.exercises || day.exercises,
-                duration: details.duration || day.duration,
+
+    try {
+      // Update WorkingDay im Backend
+      const dayUpdateData: any = {};
+      if (details.name) dayUpdateData.title = details.name;
+      if (details.focus) dayUpdateData.description = details.focus;
+
+      if (Object.keys(dayUpdateData).length > 0) {
+        await apiService.updateWorkingDay(
+          parseInt(details.dayId),
+          dayUpdateData
+        );
+      }
+
+      // Update Übungen im Backend falls vorhanden
+      if (details.exercises && details.exercises.length > 0) {
+        // Finde den aktuellen Tag um die Exercise IDs zu bekommen
+        const currentDay = trainingWeeks
+          .flatMap((week) => week.days)
+          .find((day) => day.id === details.dayId);
+
+        if (currentDay) {
+          const originalExerciseIds = currentDay.exercises
+            .map((ex) => ex.id)
+            .filter((id) => id !== undefined) as number[];
+          const newExerciseIds: number[] = [];
+          const updatedExerciseIds: number[] = [];
+
+          for (let i = 0; i < details.exercises.length; i++) {
+            const exercise = details.exercises[i];
+            if (exercise.name && exercise.name.trim() !== "") {
+              if (
+                i < currentDay.exercises.length &&
+                currentDay.exercises[i].id
+              ) {
+                // Update existing exercise
+                await apiService.updateExercise(currentDay.exercises[i].id!, {
+                  title: exercise.name,
+                  first_set_reps: exercise.repetitions || 10,
+                  first_set_weight: exercise.weight || 0,
+                });
+                updatedExerciseIds.push(currentDay.exercises[i].id!);
+              } else {
+                // Create new exercise
+                const createdExercise = await apiService.createExercise({
+                  title: exercise.name,
+                  first_set_reps: exercise.repetitions || 10,
+                  first_set_weight: exercise.weight || 0,
+                });
+                if (createdExercise.id) {
+                  newExerciseIds.push(createdExercise.id);
+                  updatedExerciseIds.push(createdExercise.id);
+                }
               }
-            : day
-        ),
-      }))
-    );
+            }
+          }
+
+          // Finde entfernte Übungen
+          const removedExerciseIds = originalExerciseIds.filter(
+            (id) => !updatedExerciseIds.includes(id)
+          );
+
+          // Entferne Übungen vom WorkingDay
+          if (removedExerciseIds.length > 0) {
+            await apiService.removeExercisesFromDay(
+              parseInt(details.dayId),
+              removedExerciseIds
+            );
+          }
+
+          // Füge neue Übungen zum WorkingDay hinzu
+          if (newExerciseIds.length > 0) {
+            await apiService.addExercisesToDay(
+              parseInt(details.dayId),
+              newExerciseIds
+            );
+          }
+        }
+      }
+
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error updating day:", error);
+      setError("Fehler beim Aktualisieren des Trainingstags");
+    }
   };
 
   const handleDeleteDay = (event: Event) => {
@@ -350,6 +525,98 @@ const Trainingsplan = () => {
       </context>
 
       {/* VOIX Tool Elements */}
+      <Tool
+        name="create_complete_training_plan"
+        description="Erstellt einen kompletten Trainingsplan mit mehreren Tagen und allen Übungen in einem Aufruf"
+        onCall={handleCreateCompleteTrainingPlan}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          required
+          description="Name des Trainingsplans"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="description"
+          type="string"
+          description="Beschreibung des Trainingsplans"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="days"
+          type="array"
+          description="Liste aller Trainingstage mit Übungen"
+        >
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name des Trainingstags"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="focus"
+                type="string"
+                required
+                description="Trainingsfokus (z.B. Oberkörper, Unterkörper, Ganzkörper)"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="duration"
+                type="number"
+                description="Dauer in Minuten (Standard: 30)"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="exercises"
+                type="array"
+                description="Liste der Übungen für diesen Tag"
+              >
+                {/* @ts-ignore */}
+                <array>
+                  {/* @ts-ignore */}
+                  <dict>
+                    {/* @ts-ignore */}
+                    <prop
+                      name="name"
+                      type="string"
+                      required
+                      description="Name der Übung"
+                    />
+                    {/* @ts-ignore */}
+                    <prop
+                      name="repetitions"
+                      type="number"
+                      required
+                      description="Anzahl Wiederholungen"
+                    />
+                    {/* @ts-ignore */}
+                    <prop
+                      name="weight"
+                      type="number"
+                      description="Gewicht in kg (Standard: 0)"
+                    />
+                    {/* @ts-ignore */}
+                  </dict>
+                  {/* @ts-ignore */}
+                </array>
+                {/* @ts-ignore */}
+              </prop>
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
+
       <Tool
         name="create_training_week"
         description="Erstellt eine neue Trainingswoche mit Namen und Beschreibung"

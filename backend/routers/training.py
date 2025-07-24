@@ -128,6 +128,42 @@ def update_exercise(exercise_id: int, exercise_update: schemas.ExerciseUpdate, d
     db.refresh(db_exercise)
     return db_exercise
 
+# Add exercises to a WorkingDay
+@router.post("/day/{day_id}/exercises", response_model=schemas.WorkingDayRead)
+def add_exercises_to_day(day_id: int, exercise_ids: List[int], db: Session = Depends(get_db)):
+    db_day = db.query(models.WorkingDay).filter(models.WorkingDay.id == day_id).first()
+    if not db_day:
+        raise HTTPException(status_code=404, detail="Working day not found")
+    
+    # Get existing exercise IDs to avoid duplicates
+    existing_exercise_ids = [ex.id for ex in db_day.exercises]
+    
+    # Add only new exercises
+    new_exercise_ids = [ex_id for ex_id in exercise_ids if ex_id not in existing_exercise_ids]
+    if new_exercise_ids:
+        new_exercises = db.query(models.Exercise).filter(models.Exercise.id.in_(new_exercise_ids)).all()
+        db_day.exercises.extend(new_exercises)
+        db.commit()
+        db.refresh(db_day)
+    
+    return db_day
+
+# Remove exercises from a WorkingDay
+@router.delete("/day/{day_id}/exercises", response_model=schemas.WorkingDayRead)
+def remove_exercises_from_day(day_id: int, exercise_ids: List[int], db: Session = Depends(get_db)):
+    db_day = db.query(models.WorkingDay).filter(models.WorkingDay.id == day_id).first()
+    if not db_day:
+        raise HTTPException(status_code=404, detail="Working day not found")
+    
+    # Remove exercises from the WorkingDay
+    exercises_to_remove = [ex for ex in db_day.exercises if ex.id in exercise_ids]
+    for exercise in exercises_to_remove:
+        db_day.exercises.remove(exercise)
+    
+    db.commit()
+    db.refresh(db_day)
+    return db_day
+
 # === Statistics ===
 @router.get("/statistics/", response_model=schemas.OverallStatistics)
 def get_statistics(db: Session = Depends(get_db)):
