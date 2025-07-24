@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -12,10 +12,14 @@ import {
   Flex,
   Input,
   Textarea,
+  Spinner,
 } from "@chakra-ui/react";
 import { Tool } from "../components/Tool";
+import { apiService } from "../services/api";
+import type { WorkingPlan } from "../services/api";
 
-interface Exercise {
+// Frontend Types (für Kompatibilität mit der bestehenden UI)
+interface FrontendExercise {
   name: string;
   repetitions: number;
   weight: number;
@@ -25,7 +29,7 @@ interface TrainingDay {
   id: string;
   name: string;
   focus: string;
-  exercises: Exercise[];
+  exercises: FrontendExercise[];
   duration: number;
 }
 
@@ -43,6 +47,8 @@ const Trainingsplan = () => {
   const [showEditDayDialog, setShowEditDayDialog] = useState(false);
   const [currentWeekId, setCurrentWeekId] = useState<string>("");
   const [editingDay, setEditingDay] = useState<TrainingDay | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newWeekData, setNewWeekData] = useState({
     name: "",
     description: "",
@@ -50,119 +56,110 @@ const Trainingsplan = () => {
   const [newDayData, setNewDayData] = useState({
     name: "",
     focus: "",
-    exercises: [{ name: "", repetitions: 10, weight: 0 }],
+    exercises: [{ name: "", repetitions: 10, weight: 0 }] as FrontendExercise[],
     duration: 30,
   });
 
-  const [trainingWeeks, setTrainingWeeks] = useState<TrainingWeek[]>([
-    {
-      id: "week1",
-      name: "Einsteiger Woche",
-      description: "Perfekt für den Einstieg ins Krafttraining",
-      days: [
-        {
-          id: "day1",
-          name: "Tag 1",
-          focus: "Oberkörper",
-          exercises: [
-            { name: "Liegestütze", repetitions: 10, weight: 0 },
-            { name: "Klimmzüge", repetitions: 5, weight: 0 },
-            { name: "Schulterdrücken", repetitions: 12, weight: 5 },
-            { name: "Bizeps Curls", repetitions: 15, weight: 3 },
-          ],
-          duration: 45,
-        },
-        {
-          id: "day2",
-          name: "Tag 2",
-          focus: "Unterkörper",
-          exercises: [
-            { name: "Kniebeugen", repetitions: 15, weight: 0 },
-            { name: "Lunges", repetitions: 12, weight: 0 },
-            { name: "Wadenheben", repetitions: 20, weight: 0 },
-            { name: "Glute Bridges", repetitions: 15, weight: 0 },
-          ],
-          duration: 40,
-        },
-        {
-          id: "day3",
-          name: "Tag 3",
-          focus: "Ganzkörper",
-          exercises: [
-            { name: "Burpees", repetitions: 10, weight: 0 },
-            { name: "Mountain Climbers", repetitions: 30, weight: 0 },
-            { name: "Planks", repetitions: 3, weight: 0 },
-            { name: "Jumping Jacks", repetitions: 20, weight: 0 },
-          ],
-          duration: 35,
-        },
-      ],
-    },
-    {
-      id: "week2",
-      name: "Fortgeschrittene Woche",
-      description: "Intensiveres Training für mehr Kraft und Ausdauer",
-      days: [
-        {
-          id: "day4",
-          name: "Tag 1",
-          focus: "Kraft Oberkörper",
-          exercises: [
-            { name: "Bankdrücken", repetitions: 8, weight: 20 },
-            { name: "Rudern", repetitions: 10, weight: 15 },
-            { name: "Dips", repetitions: 12, weight: 0 },
-            { name: "Pull-ups", repetitions: 6, weight: 0 },
-          ],
-          duration: 60,
-        },
-        {
-          id: "day5",
-          name: "Tag 2",
-          focus: "Kraft Unterkörper",
-          exercises: [
-            { name: "Deadlifts", repetitions: 6, weight: 40 },
-            { name: "Bulgarian Split Squats", repetitions: 10, weight: 10 },
-            { name: "Hip Thrusts", repetitions: 12, weight: 20 },
-            { name: "Calf Raises", repetitions: 20, weight: 15 },
-          ],
-          duration: 55,
-        },
-      ],
-    },
-  ]);
+  const [trainingWeeks, setTrainingWeeks] = useState<TrainingWeek[]>([]);
+
+  // Hilfsfunktionen für die Datenkonvertierung zwischen Frontend und Backend
+  const convertBackendToFrontend = (
+    workingPlans: WorkingPlan[]
+  ): TrainingWeek[] => {
+    return workingPlans.map((plan) => ({
+      id: plan.id?.toString() || "",
+      name: plan.title,
+      description: plan.description || "",
+      days: plan.days.map((day) => ({
+        id: day.id?.toString() || "",
+        name: day.title,
+        focus: day.description || "Ganzkörper",
+        duration: 30, // Default duration, kann später erweitert werden
+        exercises: day.exercises.map((exercise) => ({
+          name: exercise.title,
+          repetitions: exercise.first_set_reps || 10,
+          weight: exercise.first_set_weight || 0,
+        })),
+      })),
+    }));
+  };
+
+  // Daten neu laden
+  const refreshData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log("Loading training plans from database...");
+      const plans = await apiService.getWorkingPlans();
+      console.log("Loaded plans from database:", plans);
+      const frontendData = convertBackendToFrontend(plans);
+      console.log("Converted to frontend format:", frontendData);
+      setTrainingWeeks(frontendData);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Fehler beim Laden der Trainingspläne"
+      );
+      console.error("Error loading training plans:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Daten vom Backend laden
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   const addNewDay = (weekId: string) => {
     setCurrentWeekId(weekId);
     setNewDayData({
       name: "",
       focus: "",
-      exercises: [{ name: "", repetitions: 10, weight: 0 }],
+      exercises: [
+        { name: "", repetitions: 10, weight: 0 },
+      ] as FrontendExercise[],
       duration: 30,
     });
     setShowNewDayDialog(true);
   };
 
-  const createNewDay = () => {
-    const newDay: TrainingDay = {
-      id: `day${Date.now()}`,
-      name:
-        newDayData.name ||
-        `Tag ${
-          trainingWeeks.find((w) => w.id === currentWeekId)?.days.length! + 1
-        }`,
-      focus: newDayData.focus || "Ganzkörper",
-      exercises: newDayData.exercises.filter((ex) => ex.name.trim() !== ""),
-      duration: newDayData.duration,
-    };
+  const createNewDay = async () => {
+    try {
+      const targetWeek = trainingWeeks.find((w) => w.id === currentWeekId);
+      if (!targetWeek) return;
 
-    setTrainingWeeks((weeks) =>
-      weeks.map((week) =>
-        week.id === currentWeekId
-          ? { ...week, days: [...week.days, newDay] }
-          : week
-      )
-    );
-    setShowNewDayDialog(false);
+      // Erstelle Übungen im Backend
+      const exercisePromises = newDayData.exercises
+        .filter((ex) => ex.name.trim() !== "")
+        .map(async (exercise) => {
+          return await apiService.createExercise({
+            title: exercise.name,
+            first_set_reps: exercise.repetitions,
+            first_set_weight: exercise.weight,
+          });
+        });
+
+      const createdExercises = await Promise.all(exercisePromises);
+      const exerciseIds = createdExercises.map((ex) => ex.id!);
+
+      // Erstelle WorkingDay im Backend
+      await apiService.createWorkingDay({
+        day_number: targetWeek.days.length + 1,
+        title: newDayData.name || `Tag ${targetWeek.days.length + 1}`,
+        description: newDayData.focus || "Ganzkörper",
+        plan_id: parseInt(currentWeekId),
+        exercise_ids: exerciseIds,
+      });
+
+      setShowNewDayDialog(false);
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error creating new day:", error);
+      setError("Fehler beim Erstellen des neuen Trainingstags");
+    }
   };
 
   const addNewWeek = () => {
@@ -173,15 +170,20 @@ const Trainingsplan = () => {
     setShowNewWeekDialog(true);
   };
 
-  const createNewWeek = () => {
-    const newWeek: TrainingWeek = {
-      id: `week${Date.now()}`,
-      name: newWeekData.name || `Woche ${trainingWeeks.length + 1}`,
-      description: newWeekData.description || "Neue Trainingswoche",
-      days: [],
-    };
-    setTrainingWeeks([...trainingWeeks, newWeek]);
-    setShowNewWeekDialog(false);
+  const createNewWeek = async () => {
+    try {
+      await apiService.createWorkingPlan({
+        title: newWeekData.name || `Woche ${trainingWeeks.length + 1}`,
+        description: newWeekData.description || "Neue Trainingswoche",
+      });
+
+      setShowNewWeekDialog(false);
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error creating new week:", error);
+      setError("Fehler beim Erstellen der neuen Trainingswoche");
+    }
   };
 
   const editDay = (day: TrainingDay) => {
@@ -195,9 +197,10 @@ const Trainingsplan = () => {
     setShowEditDayDialog(true);
   };
 
-  const updateDay = () => {
+  const updateDay = async () => {
     if (!editingDay) return;
 
+    // Für jetzt nur Frontend State ändern, da Backend keine Update Endpoints hat
     setTrainingWeeks((weeks) =>
       weeks.map((week) => ({
         ...week,
@@ -221,38 +224,59 @@ const Trainingsplan = () => {
   };
 
   // VOIX Tool Handlers
-  const handleCreateWeek = (event: Event) => {
+  const handleCreateWeek = async (event: Event) => {
     const details = (event as CustomEvent).detail;
-    const newWeek: TrainingWeek = {
-      id: `week${Date.now()}`,
-      name: details.name || `Woche ${trainingWeeks.length + 1}`,
-      description: details.description || "Neue Trainingswoche",
-      days: [],
-    };
-    setTrainingWeeks([...trainingWeeks, newWeek]);
+    try {
+      await apiService.createWorkingPlan({
+        title: details.name || `Woche ${trainingWeeks.length + 1}`,
+        description: details.description || "Neue Trainingswoche",
+      });
+
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error creating new week:", error);
+      setError("Fehler beim Erstellen der neuen Trainingswoche");
+    }
   };
 
-  const handleCreateDay = (event: Event) => {
+  const handleCreateDay = async (event: Event) => {
     const details = (event as CustomEvent).detail;
-    const newDay: TrainingDay = {
-      id: `day${Date.now()}`,
-      name:
-        details.name ||
-        `Tag ${
-          trainingWeeks.find((w) => w.id === details.weekId)?.days.length! + 1
-        }`,
-      focus: details.focus || "Ganzkörper",
-      exercises: details.exercises || [],
-      duration: details.duration || 30,
-    };
+    try {
+      const targetWeek = trainingWeeks.find((w) => w.id === details.weekId);
+      if (!targetWeek) return;
 
-    setTrainingWeeks((weeks) =>
-      weeks.map((week) =>
-        week.id === details.weekId
-          ? { ...week, days: [...week.days, newDay] }
-          : week
-      )
-    );
+      // Erstelle Übungen falls vorhanden
+      let exerciseIds: number[] = [];
+      if (details.exercises && details.exercises.length > 0) {
+        const exercisePromises = details.exercises
+          .filter((ex: any) => ex.name && ex.name.trim() !== "")
+          .map(async (exercise: any) => {
+            return await apiService.createExercise({
+              title: exercise.name,
+              first_set_reps: exercise.repetitions || 10,
+              first_set_weight: exercise.weight || 0,
+            });
+          });
+        const createdExercises = await Promise.all(exercisePromises);
+        exerciseIds = createdExercises.map((ex) => ex.id!);
+      }
+
+      // Erstelle WorkingDay im Backend
+      await apiService.createWorkingDay({
+        day_number: targetWeek.days.length + 1,
+        title: details.name || `Tag ${targetWeek.days.length + 1}`,
+        description: details.focus || "Ganzkörper",
+        plan_id: parseInt(details.weekId),
+        exercise_ids: exerciseIds,
+      });
+
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error creating new day:", error);
+      setError("Fehler beim Erstellen des neuen Trainingstags");
+    }
   };
 
   const handleEditDay = (event: Event) => {
@@ -520,9 +544,29 @@ const Trainingsplan = () => {
             📋 Deine Trainingspläne
           </Heading>
           <Text fontSize="lg" color="text.secondary">
-            Verwalte deine Trainingswochen und -tage
+            Verwalte deine Trainingswochen und -tage (Daten aus der Datenbank)
           </Text>
+          {trainingWeeks.length > 0 && (
+            <Text fontSize="sm" color="green.600">
+              ✅ {trainingWeeks.length} Trainingsplan
+              {trainingWeeks.length !== 1 ? "e" : ""} aus der Datenbank geladen
+            </Text>
+          )}
         </Stack>
+
+        {/* Error Alert */}
+        {error && (
+          <Box
+            bg="red.50"
+            border="1px"
+            borderColor="red.200"
+            p={4}
+            mb={6}
+            borderRadius="md"
+          >
+            <Text color="red.600">{error}</Text>
+          </Box>
+        )}
 
         <Flex justify="center" mb={8}>
           <Button
@@ -532,200 +576,264 @@ const Trainingsplan = () => {
             _hover={{ bg: "accent.secondary" }}
             size="lg"
             px={8}
+            loading={isLoading}
           >
             ➕ Neue Trainingswoche hinzufügen
           </Button>
         </Flex>
 
-        <Stack gap={8}>
-          {trainingWeeks.map((week) => (
-            <Card.Root key={week.id} bg="bg.secondary" p={6}>
-              <Stack gap={6}>
-                <Flex justify="space-between" align="center">
-                  <Stack gap={2}>
-                    <Heading size="lg" color="text.primary">
-                      {week.name}
-                    </Heading>
-                    <Text color="text.secondary">{week.description}</Text>
-                  </Stack>
-                  <Button
-                    onClick={() => addNewDay(week.id)}
-                    bg="accent.primary"
-                    color="white"
-                    _hover={{ bg: "accent.secondary" }}
-                    size="sm"
-                  >
-                    ➕ Tag hinzufügen
-                  </Button>
-                </Flex>
+        {/* Loading State */}
+        {isLoading ? (
+          <Flex justify="center" py={12}>
+            <Spinner size="xl" color="accent.primary" />
+          </Flex>
+        ) : trainingWeeks.length === 0 ? (
+          /* Empty State - Keine Daten in der Datenbank */
+          <Box textAlign="center" py={12}>
+            <Text fontSize="xl" color="text.secondary" mb={4}>
+              🏋️‍♂️ Keine Trainingspläne in der Datenbank gefunden
+            </Text>
+            <Text color="text.secondary" mb={6}>
+              Erstelle deinen ersten Trainingsplan, um ihn in der Datenbank zu
+              speichern!
+            </Text>
+            <Button
+              onClick={addNewWeek}
+              bg="accent.primary"
+              color="white"
+              _hover={{ bg: "accent.secondary" }}
+              size="lg"
+            >
+              ➕ Ersten Trainingsplan erstellen
+            </Button>
+          </Box>
+        ) : (
+          /* Training Plans aus der Datenbank */
+          <Stack gap={8}>
+            {trainingWeeks.map((week) => (
+              <Card.Root key={week.id} bg="bg.secondary" p={6}>
+                <Stack gap={6}>
+                  <Flex justify="space-between" align="center">
+                    <Stack gap={2}>
+                      <Heading size="lg" color="text.primary">
+                        {week.name}
+                      </Heading>
+                      <Text color="text.secondary">{week.description}</Text>
+                    </Stack>
+                    <Button
+                      onClick={() => addNewDay(week.id)}
+                      bg="accent.primary"
+                      color="white"
+                      _hover={{ bg: "accent.secondary" }}
+                      size="sm"
+                    >
+                      ➕ Tag hinzufügen
+                    </Button>
+                  </Flex>
 
-                {week.days.length > 0 ? (
-                  <Grid
-                    templateColumns={{
-                      base: "1fr",
-                      md: "repeat(2, 1fr)",
-                      lg: "repeat(3, 1fr)",
-                    }}
-                    gap={4}
-                  >
-                    {week.days.map((day) => (
-                      <Card.Root
-                        key={day.id}
-                        bg="bg"
-                        borderColor={
-                          selectedDay === day.id ? "accent.primary" : "border"
-                        }
-                        borderWidth="2px"
-                        cursor="pointer"
-                        transition="all 0.3s ease"
-                        _hover={{
-                          borderColor: "accent.primary",
-                          transform: "translateY(-2px)",
-                          boxShadow: "lg",
-                        }}
-                        onClick={() =>
-                          setSelectedDay(selectedDay === day.id ? null : day.id)
-                        }
-                      >
-                        <Card.Body p={4}>
-                          <Stack gap={3}>
-                            <Flex justify="space-between" align="center">
-                              <Heading size="md" color="text.primary">
-                                {day.name}
-                              </Heading>
-                              <Text fontSize="sm" color="text.secondary">
-                                ⏱️ {day.duration}min
-                              </Text>
-                            </Flex>
+                  {week.days.length > 0 ? (
+                    <Grid
+                      templateColumns={{
+                        base: "1fr",
+                        md: "repeat(2, 1fr)",
+                        lg: "repeat(3, 1fr)",
+                      }}
+                      gap={4}
+                    >
+                      {week.days.map((day) => (
+                        <Card.Root
+                          key={day.id}
+                          bg="bg"
+                          borderColor={
+                            selectedDay === day.id ? "accent.primary" : "border"
+                          }
+                          borderWidth="2px"
+                          cursor="pointer"
+                          transition="all 0.3s ease"
+                          _hover={{
+                            borderColor: "accent.primary",
+                            transform: "translateY(-2px)",
+                            boxShadow: "lg",
+                          }}
+                          onClick={() =>
+                            setSelectedDay(
+                              selectedDay === day.id ? null : day.id
+                            )
+                          }
+                        >
+                          <Card.Body p={4}>
+                            <Stack gap={3}>
+                              <Flex justify="space-between" align="center">
+                                <Heading size="md" color="text.primary">
+                                  {day.name}
+                                </Heading>
+                                <Text fontSize="sm" color="text.secondary">
+                                  ⏱️ {day.duration}min
+                                </Text>
+                              </Flex>
 
-                            <Badge
-                              colorPalette="orange"
-                              variant="outline"
-                              alignSelf="flex-start"
-                            >
-                              {day.focus}
-                            </Badge>
-
-                            <Box>
-                              <Text
-                                fontSize="sm"
-                                fontWeight="bold"
-                                color="text.primary"
-                                mb={2}
+                              <Badge
+                                colorPalette="orange"
+                                variant="outline"
+                                alignSelf="flex-start"
                               >
-                                Übungen:
-                              </Text>
-                              <Stack gap={1}>
-                                {day.exercises.map((exercise, index) => (
-                                  <Text
-                                    key={index}
-                                    fontSize="sm"
-                                    color="text.secondary"
-                                  >
-                                    • {exercise.name} ({exercise.repetitions}x
-                                    {exercise.weight > 0
-                                      ? `, ${exercise.weight}kg`
-                                      : ""}
-                                    )
-                                  </Text>
-                                ))}
-                              </Stack>
-                            </Box>
+                                {day.focus}
+                              </Badge>
 
-                            <Flex gap={2}>
-                              <Button
-                                bg="accent.primary"
-                                color="white"
-                                _hover={{ bg: "accent.secondary" }}
-                                size="sm"
-                                flex="1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.location.href = "/live-workout";
-                                }}
-                              >
-                                🏃‍♂️ Training starten
-                              </Button>
-                              <Button
-                                bg="gray.500"
-                                color="white"
-                                _hover={{ bg: "gray.600" }}
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  editDay(day);
-                                }}
-                              >
-                                ✏️ Bearbeiten
-                              </Button>
-                            </Flex>
-                          </Stack>
-                        </Card.Body>
-                      </Card.Root>
-                    ))}
-                  </Grid>
-                ) : (
-                  <Box
-                    textAlign="center"
-                    py={8}
-                    border="2px dashed"
-                    borderColor="border"
-                    borderRadius="lg"
-                    bg="bg.tertiary"
+                              <Box>
+                                <Text
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                  color="text.primary"
+                                  mb={2}
+                                >
+                                  Übungen:
+                                </Text>
+                                <Stack gap={1}>
+                                  {day.exercises.map((exercise, index) => (
+                                    <Text
+                                      key={index}
+                                      fontSize="sm"
+                                      color="text.secondary"
+                                    >
+                                      • {exercise.name} ({exercise.repetitions}x
+                                      {exercise.weight > 0
+                                        ? `, ${exercise.weight}kg`
+                                        : ""}
+                                      )
+                                    </Text>
+                                  ))}
+                                </Stack>
+                              </Box>
+
+                              <Flex gap={2}>
+                                <Button
+                                  bg="accent.primary"
+                                  color="white"
+                                  _hover={{ bg: "accent.secondary" }}
+                                  size="sm"
+                                  flex="1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = "/live-workout";
+                                  }}
+                                >
+                                  🏃‍♂️ Training starten
+                                </Button>
+                                <Button
+                                  bg="gray.500"
+                                  color="white"
+                                  _hover={{ bg: "gray.600" }}
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    editDay(day);
+                                  }}
+                                >
+                                  ✏️ Bearbeiten
+                                </Button>
+                              </Flex>
+                            </Stack>
+                          </Card.Body>
+                        </Card.Root>
+                      ))}
+                    </Grid>
+                  ) : (
+                    <Box
+                      textAlign="center"
+                      py={8}
+                      border="2px dashed"
+                      borderColor="border"
+                      borderRadius="lg"
+                      bg="bg.tertiary"
+                    >
+                      <Text color="text.secondary" fontSize="lg">
+                        Keine Trainingstage vorhanden
+                      </Text>
+                      <Text color="text.secondary" fontSize="sm" mt={2}>
+                        Klicke auf "Tag hinzufügen" um zu beginnen
+                      </Text>
+                    </Box>
+                  )}
+                </Stack>
+              </Card.Root>
+            ))}
+
+            <Box mt={12} p={6} bg="bg.secondary" borderRadius="lg">
+              <Heading size="md" color="text.primary" mb={4} textAlign="center">
+                💡 Trainingstipps
+              </Heading>
+              <Grid
+                templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
+                gap={4}
+              >
+                <Box
+                  textAlign="center"
+                  p={4}
+                  bg="bg.tertiary"
+                  borderRadius="md"
+                >
+                  <Text fontSize="2xl" mb={2}>
+                    🔥
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    fontWeight="bold"
+                    color="text.primary"
+                    mb={1}
                   >
-                    <Text color="text.secondary" fontSize="lg">
-                      Keine Trainingstage vorhanden
-                    </Text>
-                    <Text color="text.secondary" fontSize="sm" mt={2}>
-                      Klicke auf "Tag hinzufügen" um zu beginnen
-                    </Text>
-                  </Box>
-                )}
-              </Stack>
-            </Card.Root>
-          ))}
-        </Stack>
-
-        <Box mt={12} p={6} bg="bg.secondary" borderRadius="lg">
-          <Heading size="md" color="text.primary" mb={4} textAlign="center">
-            💡 Trainingstipps
-          </Heading>
-          <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
-            <Box textAlign="center" p={4} bg="bg.tertiary" borderRadius="md">
-              <Text fontSize="2xl" mb={2}>
-                🔥
-              </Text>
-              <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={1}>
-                Aufwärmen
-              </Text>
-              <Text fontSize="xs" color="text.secondary">
-                Beginne jedes Training mit 5-10 Minuten Aufwärmübungen
-              </Text>
+                    Aufwärmen
+                  </Text>
+                  <Text fontSize="xs" color="text.secondary">
+                    Beginne jedes Training mit 5-10 Minuten Aufwärmübungen
+                  </Text>
+                </Box>
+                <Box
+                  textAlign="center"
+                  p={4}
+                  bg="bg.tertiary"
+                  borderRadius="md"
+                >
+                  <Text fontSize="2xl" mb={2}>
+                    💧
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    fontWeight="bold"
+                    color="text.primary"
+                    mb={1}
+                  >
+                    Hydration
+                  </Text>
+                  <Text fontSize="xs" color="text.secondary">
+                    Trinke vor, während und nach dem Training ausreichend Wasser
+                  </Text>
+                </Box>
+                <Box
+                  textAlign="center"
+                  p={4}
+                  bg="bg.tertiary"
+                  borderRadius="md"
+                >
+                  <Text fontSize="2xl" mb={2}>
+                    😴
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    fontWeight="bold"
+                    color="text.primary"
+                    mb={1}
+                  >
+                    Erholung
+                  </Text>
+                  <Text fontSize="xs" color="text.secondary">
+                    Gönne deinem Körper zwischen den Trainingseinheiten Ruhe
+                  </Text>
+                </Box>
+              </Grid>
             </Box>
-            <Box textAlign="center" p={4} bg="bg.tertiary" borderRadius="md">
-              <Text fontSize="2xl" mb={2}>
-                💧
-              </Text>
-              <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={1}>
-                Hydration
-              </Text>
-              <Text fontSize="xs" color="text.secondary">
-                Trinke vor, während und nach dem Training ausreichend Wasser
-              </Text>
-            </Box>
-            <Box textAlign="center" p={4} bg="bg.tertiary" borderRadius="md">
-              <Text fontSize="2xl" mb={2}>
-                😴
-              </Text>
-              <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={1}>
-                Erholung
-              </Text>
-              <Text fontSize="xs" color="text.secondary">
-                Gönne deinem Körper zwischen den Trainingseinheiten Ruhe
-              </Text>
-            </Box>
-          </Grid>
-        </Box>
+          </Stack>
+        )}
 
         {/* Dialog für neue Trainingswoche */}
         {showNewWeekDialog && (

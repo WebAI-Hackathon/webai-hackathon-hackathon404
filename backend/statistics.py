@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 from typing import List
-from . import models, schemas
+import models, schemas
 
 class StatisticsService:
     """Service-Klasse für vereinfachte Statistik-Funktionen"""

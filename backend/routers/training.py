@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 from typing import List
-from ..database import SessionLocal
-from .. import models, schemas
+from database import SessionLocal
+import models, schemas
 
 router = APIRouter()
 
