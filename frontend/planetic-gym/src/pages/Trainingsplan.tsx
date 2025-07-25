@@ -746,6 +746,27 @@ const Trainingsplan = () => {
     }
   };
 
+  const handleExportDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    try {
+      // Finde den Tag und die Woche anhand der dayId
+      const targetDay = trainingWeeks
+        .flatMap((week) => 
+          week.days.map(day => ({ day, weekName: week.name }))
+        )
+        .find(({ day }) => day.id === details.dayId);
+
+      if (targetDay) {
+        exportDayToPDF(targetDay.day, targetDay.weekName);
+      } else {
+        setError("Training day not found for export");
+      }
+    } catch (error) {
+      console.error("Error exporting day:", error);
+      setError("Error while exporting training day");
+    }
+  };
+
   return (
     <Box py={8}>
       {/* VOIX Context Elements */}
@@ -1045,6 +1066,20 @@ const Trainingsplan = () => {
           name="description"
           type="string"
           description="Neue Beschreibung der Trainingswoche"
+        />
+      </Tool>
+
+      <Tool
+        name="export_training_day"
+        description="Exportiert einen Trainingstag als PDF und startet den Download"
+        onCall={handleExportDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID des Trainingstages der exportiert werden soll"
         />
       </Tool>
 
