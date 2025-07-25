@@ -300,8 +300,12 @@ const LiveWorkout = () => {
 
   // Load workout from database if dayId is provided
   useEffect(() => {
+    // Check for dayId in localStorage first, then URL as fallback
+    const storedDayId = localStorage.getItem("selectedDayId");
     const urlParams = new URLSearchParams(window.location.search);
-    const dayId = urlParams.get("dayId");
+    const urlDayId = urlParams.get("dayId");
+
+    const dayId = storedDayId || urlDayId;
 
     // Always load all exercises for exercise management
     loadAllExercises();
@@ -311,6 +315,10 @@ const LiveWorkout = () => {
 
     if (dayId) {
       loadWorkingDay(parseInt(dayId));
+      // Clear the stored dayId after using it
+      if (storedDayId) {
+        localStorage.removeItem("selectedDayId");
+      }
     }
   }, []);
 
@@ -498,7 +506,7 @@ const LiveWorkout = () => {
       setCompletedExercises(new Set());
 
       // Optionally redirect to statistics or home
-      // window.location.href = "/statistiken";
+      // window.location.href = "/#/statistiken";
     }
   };
 
@@ -1576,6 +1584,22 @@ const LiveWorkout = () => {
       </Tool>
 
       <Container maxW="6xl">
+        {/* Back to Training Plans Button */}
+        <Flex justify="flex-start" mb={6}>
+          <Button
+            size="sm"
+            bg="orange.500"
+            color="white"
+            _hover={{ bg: "orange.600" }}
+            onClick={() => (window.location.href = "/#/trainingsplan")}
+          >
+            <Flex align="center" gap={2}>
+              <FaArrowLeft />
+              Back to Training Plans
+            </Flex>
+          </Button>
+        </Flex>
+
         {/* Workout Header */}
         <Stack gap={4} textAlign="center" mb={12}>
           <Heading size="2xl" color="text.primary">

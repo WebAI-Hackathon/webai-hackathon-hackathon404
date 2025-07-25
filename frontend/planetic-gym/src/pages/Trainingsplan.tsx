@@ -719,8 +719,9 @@ const Trainingsplan = () => {
 
   const handleStartWorkout = (event: Event) => {
     const details = (event as CustomEvent).detail;
-    // Navigation logic could be implemented here
-    window.location.href = `/live-workout?dayId=${details.dayId}`;
+    // Store dayId in localStorage instead of URL parameter
+    localStorage.setItem("selectedDayId", details.dayId);
+    window.location.href = `/#/live-workout`;
   };
 
   const handleEditWeek = async (event: Event) => {
@@ -1313,7 +1314,12 @@ const Trainingsplan = () => {
                                   flex="1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    window.location.href = `/live-workout?dayId=${day.id}`;
+                                    // Store dayId in localStorage instead of URL parameter
+                                    localStorage.setItem(
+                                      "selectedDayId",
+                                      day.id
+                                    );
+                                    window.location.href = `/#/live-workout`;
                                   }}
                                 >
                                   <Flex align="center" gap={1}>
