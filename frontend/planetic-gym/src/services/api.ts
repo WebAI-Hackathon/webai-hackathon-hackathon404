@@ -59,6 +59,47 @@ export interface OverallStatistics {
   workout_stats: WorkoutStatistics;
   exercise_frequencies: ExerciseFrequency[];
   exercise_stats: ExerciseStatistics[];
+  extended_exercise_stats: ExtendedExerciseStats[];
+  plan_statistics: PlanStatistics[];
+  progress_data: ExerciseProgress[];
+}
+
+export interface ExtendedExerciseStats {
+  exercise_id: number;
+  exercise_title: string;
+  plan_title: string;
+  total_workouts: number;
+  total_sets: number;
+  max_weight?: number;
+  avg_weight?: number;
+  max_reps?: number;
+  avg_reps?: number;
+  last_workout_date?: string;
+}
+
+export interface PlanStatistics {
+  plan_id: number;
+  plan_title: string;
+  total_workouts: number;
+  total_exercises: number;
+  completion_rate: number;
+  last_workout_date?: string;
+}
+
+export interface ProgressDataPoint {
+  date: string;
+  exercise_name: string;
+  max_weight?: number;
+  avg_weight?: number;
+  total_sets: number;
+  total_reps: number;
+}
+
+export interface ExerciseProgress {
+  exercise_name: string;
+  data_points: ProgressDataPoint[];
+  overall_improvement: number;
+  current_streak: number;
 }
 
 // API Service

@@ -86,6 +86,40 @@ class ExerciseStatisticsRead(BaseModel):
     class Config:
         from_attributes = True
 
+class ExtendedExerciseStats(BaseModel):
+    exercise_id: int
+    exercise_title: str
+    plan_title: str
+    total_workouts: int
+    total_sets: int
+    max_weight: Optional[float] = None
+    avg_weight: Optional[float] = None
+    max_reps: Optional[int] = None
+    avg_reps: Optional[float] = None
+    last_workout_date: Optional[datetime] = None
+
+class PlanStatistics(BaseModel):
+    plan_id: int
+    plan_title: str
+    total_workouts: int
+    total_exercises: int
+    completion_rate: float  # Percentage of exercises completed
+    last_workout_date: Optional[datetime] = None
+
+class ProgressDataPoint(BaseModel):
+    date: str
+    exercise_name: str
+    max_weight: Optional[float] = None
+    avg_weight: Optional[float] = None
+    total_sets: int
+    total_reps: int
+
+class ExerciseProgress(BaseModel):
+    exercise_name: str
+    data_points: List[ProgressDataPoint]
+    overall_improvement: float  # Prozentuale Verbesserung in Weight
+    current_streak: int  # Aufeinanderfolgende Workouts mit dieser Übung
+
 class WorkoutStatistics(BaseModel):
     total_workouts: int
     weekly_workouts: int
@@ -96,3 +130,6 @@ class OverallStatistics(BaseModel):
     workout_stats: WorkoutStatistics
     exercise_frequencies: List[ExerciseFrequency] = []
     exercise_stats: List[ExerciseStatisticsRead] = []
+    extended_exercise_stats: List[ExtendedExerciseStats] = []
+    plan_statistics: List[PlanStatistics] = []
+    progress_data: List[ExerciseProgress] = []

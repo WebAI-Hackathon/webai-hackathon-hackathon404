@@ -1,432 +1,536 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
-  Container,
-  Heading,
+  HStack,
   Text,
-  Button,
-  Grid,
+  Heading,
+  Badge,
+  Container,
   Stack,
-  Progress,
   Spinner,
+  Grid,
 } from "@chakra-ui/react";
-import { apiService } from "../services/api";
-import type { OverallStatistics } from "../services/api";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { apiService, type OverallStatistics } from "../services/api";
+import ProgressRing from "../components/ProgressRing";
+import { Tool } from "../components/Tool";
 
 const Statistiken = () => {
-  const [statistics, setStatistics] = useState<OverallStatistics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [overallStats, setOverallStats] = useState<OverallStatistics | null>(null);
+  const [exerciseFrequencies, setExerciseFrequencies] = useState<any[]>([]);
+  const [progressData, setProgressData] = useState<any[]>([]);
+  const [planStats, setPlanStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load statistics from backend
-  useEffect(() => {
-    loadStatistics();
-  }, []);
+  // Context für AI
+  const statisticsContext = () => {
+    if (!overallStats) {
+      return "Keine Statistiken geladen. Verwende die verfügbaren Tools um Trainingsstatistiken abzurufen.";
+    }
+    return `Aktuelle Trainingsstatistiken: ${overallStats.workout_stats.total_workouts} Workouts insgesamt, ${overallStats.extended_exercise_stats.length} verschiedene Übungen durchgeführt.`;
+  };
 
-  const loadStatistics = async () => {
+  // Tool: Übersicht der Trainingsstatistiken anzeigen
+  const handleGetOverviewStats = async (event: Event) => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      setError(null);
-
       const stats = await apiService.getOverallStatistics();
-      setStatistics(stats);
-
-      console.log("Loaded statistics:", stats);
+      setOverallStats(stats);
+      
+      // Return data to AI
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: {
+          total_workouts: stats.workout_stats.total_workouts,
+          total_exercises: stats.extended_exercise_stats.length,
+          total_plans: stats.plan_statistics.length
+        }
+      }));
     } catch (err) {
-      console.error("Error loading statistics:", err);
-      setError(
-        err instanceof Error ? err.message : "Fehler beim Laden der Statistiken"
-      );
+      const errorMsg = err instanceof Error ? err.message : "Fehler beim Laden der Übersichtsstatistiken";
+      setError(errorMsg);
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: { error: errorMsg }
+      }));
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const refreshStatistics = () => {
-    loadStatistics();
+  // Tool: Übungsfrequenzen anzeigen
+  const handleGetExerciseFrequencies = async (event: Event) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const stats = await apiService.getOverallStatistics();
+      setExerciseFrequencies(stats.exercise_frequencies);
+      
+      const topExercises = stats.exercise_frequencies.slice(0, 3);
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: {
+          message: `Top 3 Übungen: ${topExercises.map(ex => `${ex.exercise_title} (${ex.frequency} Sets)`).join(', ')}`,
+          total_exercises: stats.exercise_frequencies.length
+        }
+      }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Fehler beim Laden der Übungsfrequenzen";
+      setError(errorMsg);
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: { error: errorMsg }
+      }));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Helper functions
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("de-DE", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+  // Tool: Fortschrittsdiagramme anzeigen
+  const handleGetProgressCharts = async (event: Event) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const stats = await apiService.getOverallStatistics();
+      setProgressData(stats.progress_data || []);
+      
+      const improvements = stats.progress_data?.map(p => ({
+        exercise: p.exercise_name,
+        improvement: p.overall_improvement
+      })) || [];
+      
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: {
+          message: `Fortschrittsdiagramme für ${improvements.length} Übungen geladen`,
+          improvements: improvements
+        }
+      }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Fehler beim Laden der Fortschrittsdiagramme";
+      setError(errorMsg);
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: { error: errorMsg }
+      }));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const calculateCaloriesBurned = (setsCompleted: number): number => {
-    // Schätzung: ca. 10-15 Kalorien pro Set (je nach Intensität)
-    return Math.round(setsCompleted * 12);
-  };
-
-  const calculateTrainingTime = (setsCompleted: number): number => {
-    // Schätzung: ca. 2-3 Minuten pro Set (inkl. Pause)
-    return Math.round(setsCompleted * 2.5);
-  };
-
-  if (isLoading) {
-    return (
-      <Box py={8}>
-        <Container maxW="7xl">
-          <Stack gap={4} textAlign="center" align="center">
-            <Spinner size="xl" color="accent.primary" />
-            <Text>Statistiken werden geladen...</Text>
-          </Stack>
-        </Container>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box py={8}>
-        <Container maxW="7xl">
-          <Box
-            p={6}
-            bg="red.50"
-            borderColor="red.200"
-            borderWidth="1px"
-            rounded="lg"
-            textAlign="center"
-          >
-            <Text color="red.600" fontWeight="bold" mb={2}>
-              ❌ Fehler beim Laden der Statistiken
-            </Text>
-            <Text color="red.500" mb={4}>
-              {error}
-            </Text>
-            <Button
-              onClick={refreshStatistics}
-              colorScheme="red"
-              variant="outline"
-            >
-              Erneut versuchen
-            </Button>
-          </Box>
-        </Container>
-      </Box>
-    );
-  }
-
-  if (!statistics) {
-    return (
-      <Box py={8}>
-        <Container maxW="7xl">
-          <Box
-            p={6}
-            bg="blue.50"
-            borderColor="blue.200"
-            borderWidth="1px"
-            rounded="lg"
-            textAlign="center"
-          >
-            <Text color="blue.600" fontWeight="bold" mb={2}>
-              ℹ️ Keine Statistiken verfügbar
-            </Text>
-            <Text color="blue.500">Führe zuerst einige Workouts durch!</Text>
-          </Box>
-        </Container>
-      </Box>
-    );
-  }
-
-  const workoutStats = statistics.workout_stats;
-  const exerciseFreqs = statistics.exercise_frequencies;
-  const exerciseStats = statistics.exercise_stats;
-
-  // Calculate derived statistics
-  const totalSetsCompleted = exerciseStats.reduce((total, exercise) => {
-    return total + (exercise.total_workouts || 0);
-  }, 0);
-
-  const estimatedCalories = calculateCaloriesBurned(totalSetsCompleted);
-  const estimatedTrainingTime = calculateTrainingTime(totalSetsCompleted);
-
-  // Current stats based on time range
-  const currentStats = {
-    totalWorkouts: workoutStats.total_workouts,
-    calories: estimatedCalories,
-    duration: estimatedTrainingTime,
-    exercises: exerciseStats.length,
+  // Tool: Trainingsplan-Statistiken anzeigen
+  const handleGetPlanStats = async (event: Event) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const stats = await apiService.getOverallStatistics();
+      setPlanStats(stats.plan_statistics);
+      
+      const planSummary = stats.plan_statistics.map(plan => ({
+        name: plan.plan_title,
+        completion: plan.completion_rate,
+        workouts: plan.total_workouts
+      }));
+      
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: {
+          message: `${stats.plan_statistics.length} Trainingspläne analysiert`,
+          plans: planSummary
+        }
+      }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Fehler beim Laden der Trainingsplan-Statistiken";
+      setError(errorMsg);
+      (event.target as any).dispatchEvent(new CustomEvent('return', { 
+        detail: { error: errorMsg }
+      }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Box py={8}>
       <Container maxW="7xl">
-        {/* Stats Header */}
-        <Stack gap={4} textAlign="center" mb={8}>
-          <Heading size="2xl" color="text.primary">
-            📊 Deine Statistiken
+        {/* VOIX Tools */}
+        <Tool 
+          name="get_workout_overview" 
+          description="Zeige eine Übersicht der Trainingsstatistiken mit Progress Ringen an"
+          onCall={handleGetOverviewStats}
+          return
+        />
+        
+        <Tool 
+          name="show_exercise_frequencies" 
+          description="Zeige Übungsfrequenzen als Histogramm an"
+          onCall={handleGetExerciseFrequencies}
+          return
+        />
+        
+        <Tool 
+          name="display_progress_charts" 
+          description="Zeige Fortschrittsdiagramme für Gewichtsentwicklung an"
+          onCall={handleGetProgressCharts}
+          return
+        />
+        
+        <Tool 
+          name="show_plan_statistics" 
+          description="Zeige Trainingsplan-Statistiken und Completion Rates an"
+          onCall={handleGetPlanStats}
+          return
+        />
+
+        {/* Context für AI */}
+        <div data-context="training_statistics">
+          {statisticsContext()}
+        </div>
+
+        <Stack gap={8}>
+          <Heading color="text.primary" textAlign="center">
+            📊 Trainings-Statistiken
           </Heading>
-          <Text fontSize="lg" color="text.secondary">
-            Verfolge deinen Fortschritt basierend auf echten Trainingsdaten
-          </Text>
-          <Button
-            onClick={refreshStatistics}
-            size="sm"
-            variant="outline"
-            colorScheme="blue"
-          >
-            🔄 Aktualisieren
-          </Button>
-        </Stack>
+          
+          {loading && (
+            <Stack gap={4} textAlign="center" align="center">
+              <Spinner size="xl" color="accent.primary" />
+              <Text>Lade Statistiken...</Text>
+            </Stack>
+          )}
 
-        {/* Stats Overview */}
-        <Grid
-          templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }}
-          gap={6}
-          mb={12}
-        >
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-            textAlign="center"
-          >
-            <Text fontSize="3xl" mb={2}>
-              🏃‍♂️
-            </Text>
-            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
-              {currentStats.totalWorkouts}
-            </Text>
-            <Text color="text.secondary" fontSize="sm">
-              Trainingstage
-            </Text>
-          </Box>
+          {error && (
+            <Box
+              p={6}
+              bg="red.50"
+              borderColor="red.200"
+              borderWidth="1px"
+              rounded="lg"
+              textAlign="center"
+            >
+              <Text color="red.600" fontWeight="bold" mb={2}>
+                ⚠️ Fehler beim Laden
+              </Text>
+              <Text color="red.600">{error}</Text>
+            </Box>
+          )}
 
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-            textAlign="center"
-          >
-            <Text fontSize="3xl" mb={2}>
-              �
-            </Text>
-            <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
-              {totalSetsCompleted}
-            </Text>
-            <Text color="text.secondary" fontSize="sm">
-              Sets gesamt
-            </Text>
-          </Box>
-        </Grid>
+          {!overallStats && !loading && !error && (
+            <Box
+              p={8}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+              textAlign="center"
+            >
+              <Text color="text.secondary" fontSize="lg" mb={4}>
+                🎯 Statistiken bereit zur Anzeige
+              </Text>
+              <Text color="text.secondary">
+                Sage der KI, welche Statistiken du sehen möchtest:
+              </Text>
+              <Box mt={4} color="text.secondary" fontSize="sm">
+                <Text>• "Zeige mir eine Übersicht meiner Trainingsstatistiken"</Text>
+                <Text>• "Zeige die Häufigkeit meiner Übungen"</Text>
+                <Text>• "Zeige meine Fortschrittsdiagramme"</Text>
+                <Text>• "Wie sehen meine Trainingsplan-Statistiken aus?"</Text>
+              </Box>
+            </Box>
+          )}
 
-        {/* Content Grid */}
-        <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={8} mb={12}>
-          {/* Exercise Frequency */}
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-          >
-            <Heading size="md" color="text.primary" mb={6}>
-              � Beliebte Übungen
-            </Heading>
-            {exerciseFreqs.length > 0 ? (
-              <Stack gap={3}>
-                {exerciseFreqs.slice(0, 5).map((exercise) => (
-                  <Box key={exercise.exercise_id}>
-                    <Stack
-                      direction="row"
-                      justify="space-between"
-                      align="center"
-                      mb={2}
-                    >
-                      <Text
-                        color="text.primary"
-                        fontWeight="medium"
-                        fontSize="sm"
+          {/* Progress Ringe - Overall Performance */}
+          {overallStats && (
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+            >
+              <Heading size="md" color="text.primary" mb={6}>
+                📊 Performance Übersicht
+              </Heading>
+              <Grid templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" }} gap={6}>
+                {/* Workout Completion */}
+                <ProgressRing
+                  percentage={Math.min((overallStats.workout_stats.total_workouts / 20) * 100, 100)}
+                  color="#3B82F6"
+                  label="Workout Fortschritt"
+                  value={`${overallStats.workout_stats.total_workouts}/20`}
+                  size={100}
+                />
+                
+                {/* Exercise Variety */}
+                <ProgressRing
+                  percentage={Math.min((overallStats.extended_exercise_stats.length / 15) * 100, 100)}
+                  color="#10B981"
+                  label="Übungsvielfalt"
+                  value={`${overallStats.extended_exercise_stats.length}/15`}
+                  size={100}
+                />
+                
+                {/* Plan Usage */}
+                {overallStats.plan_statistics.length > 0 && (
+                  <ProgressRing
+                    percentage={overallStats.plan_statistics[0]?.completion_rate || 0}
+                    color="#F59E0B"
+                    label="Plan Vollständigkeit"
+                    value={`${Math.round(overallStats.plan_statistics[0]?.completion_rate || 0)}%`}
+                    size={100}
+                  />
+                )}
+                
+                {/* Total Sets Achievement */}
+                {overallStats.extended_exercise_stats.length > 0 && (
+                  <ProgressRing
+                    percentage={Math.min((overallStats.extended_exercise_stats.reduce((sum, ex) => sum + ex.total_sets, 0) / 100) * 100, 100)}
+                    color="#EF4444"
+                    label="Gesamte Sets"
+                    value={`${overallStats.extended_exercise_stats.reduce((sum, ex) => sum + ex.total_sets, 0)}`}
+                    size={100}
+                  />
+                )}
+                
+                {/* Weight Progress (if available) */}
+                {progressData && progressData.length > 0 && (
+                  <ProgressRing
+                    percentage={Math.max(0, Math.min(100, progressData[0].overall_improvement + 50))}
+                    color="#8B5CF6"
+                    label="Gewichts-entwicklung"
+                    value={`${progressData[0].overall_improvement > 0 ? '+' : ''}${progressData[0].overall_improvement.toFixed(1)}%`}
+                    size={100}
+                  />
+                )}
+              </Grid>
+            </Box>
+          )}
+
+          {/* Exercise Frequencies Histogram */}
+          {exerciseFrequencies.length > 0 && (
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+            >
+              <Heading size="md" color="text.primary" mb={6}>
+                🏋️ Übungshäufigkeiten
+              </Heading>
+              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
+                {exerciseFrequencies.slice(0, 9).map((exercise, index) => (
+                  <Box
+                    key={exercise.exercise_id}
+                    p={4}
+                    bg="bg.tertiary"
+                    rounded="md"
+                    borderColor="border"
+                    borderWidth="1px"
+                  >
+                    <HStack justify="space-between" mb={2}>
+                      <Text 
+                        color="text.primary" 
+                        fontWeight="bold" 
+                        fontSize="sm" 
+                        maxW="200px" 
+                        style={{ 
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical"
+                        }}
                       >
                         {exercise.exercise_title}
                       </Text>
-                      <Text color="text.secondary" fontSize="sm">
-                        {exercise.frequency}x
-                      </Text>
-                    </Stack>
-                    <Progress.Root
-                      value={
-                        (exercise.frequency /
-                          (exerciseFreqs[0]?.frequency || 1)) *
-                        100
-                      }
-                      size="sm"
-                      colorPalette="green"
-                    >
-                      <Progress.Track bg="bg.tertiary">
-                        <Progress.Range />
-                      </Progress.Track>
-                    </Progress.Root>
+                      <Badge colorScheme={index < 3 ? "green" : index < 6 ? "yellow" : "gray"}>
+                        {exercise.frequency} Sets
+                      </Badge>
+                    </HStack>
+                    
+                    {/* Histogram Bar */}
+                    <Box bg="bg.secondary" rounded="md" h="12px" overflow="hidden" mb={2}>
+                      <Box 
+                        bg={index < 3 ? "green.500" : index < 6 ? "yellow.500" : "gray.500"}
+                        h="100%"
+                        w={`${Math.min((exercise.frequency / Math.max(...exerciseFrequencies.map(e => e.frequency))) * 100, 100)}%`}
+                        rounded="md"
+                        transition="width 0.3s ease"
+                      />
+                    </Box>
                   </Box>
                 ))}
-              </Stack>
-            ) : (
-              <Text color="text.secondary">
-                Noch keine Übungsdaten verfügbar
-              </Text>
-            )}
-          </Box>
+              </Grid>
+            </Box>
+          )}
 
-          {/* Exercise Statistics */}
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-          >
-            <Heading size="md" color="text.primary" mb={6}>
-              � Übungsstatistiken
-            </Heading>
-            {exerciseStats.length > 0 ? (
-              <Stack gap={3}>
-                {/* Header */}
-                <Grid
-                  templateColumns="2fr 1fr 1.5fr"
-                  gap={4}
-                  p={3}
-                  bg="bg.tertiary"
-                  rounded="md"
-                >
-                  <Text color="text.secondary" fontSize="sm" fontWeight="bold">
-                    Übung
-                  </Text>
-                  <Text color="text.secondary" fontSize="sm" fontWeight="bold">
-                    Workouts
-                  </Text>
-                  <Text color="text.secondary" fontSize="sm" fontWeight="bold">
-                    Letztes Training
-                  </Text>
-                </Grid>
-
-                {/* Data rows */}
-                {exerciseStats.slice(0, 5).map((exercise) => (
-                  <Grid
-                    key={exercise.exercise_id}
-                    templateColumns="2fr 1fr 1.5fr"
-                    gap={4}
-                    p={3}
-                    borderBottom="1px solid"
-                    borderColor="border"
-                  >
-                    <Text color="text.primary" fontSize="sm">
-                      {exercise.exercise_title}
-                    </Text>
-                    <Text color="text.primary" fontSize="sm">
-                      {exercise.total_workouts}
-                    </Text>
-                    <Text color="text.secondary" fontSize="xs">
-                      {exercise.last_workout_date
-                        ? formatDate(exercise.last_workout_date)
-                        : "Nie"}
-                    </Text>
-                  </Grid>
-                ))}
-              </Stack>
-            ) : (
-              <Text color="text.secondary">
-                Noch keine Übungsstatistiken verfügbar
-              </Text>
-            )}
-          </Box>
-        </Grid>
-
-        {/* Last Workouts */}
-        {workoutStats.last_three_workouts.length > 0 && (
-          <Box
-            p={6}
-            bg="bg.secondary"
-            borderColor="border"
-            borderWidth="1px"
-            rounded="lg"
-            mb={8}
-          >
-            <Heading size="md" color="text.primary" mb={6}>
-              📝 Letzte Trainingstage
-            </Heading>
-            <Grid
-              templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
-              gap={4}
+          {/* Liniendiagramme - Weight Progression */}
+          {progressData && progressData.length > 0 && (
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
             >
-              {workoutStats.last_three_workouts.map((workout) => (
-                <Box
-                  key={workout.id}
-                  p={4}
-                  bg="bg.tertiary"
-                  rounded="md"
-                  borderColor="border"
-                  borderWidth="1px"
-                >
-                  <Stack gap={2}>
-                    <Text
-                      color="text.primary"
-                      fontWeight="medium"
-                      fontSize="sm"
-                    >
-                      {workout.title}
+              <Heading size="md" color="text.primary" mb={6}>
+                📈 Gewichtsentwicklung
+              </Heading>
+              <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={6}>
+                {progressData.slice(0, 4).map((exerciseProgress) => (
+                  <Box
+                    key={exerciseProgress.exercise_name}
+                    p={4}
+                    bg="bg.tertiary"
+                    rounded="md"
+                    borderColor="border"
+                    borderWidth="1px"
+                  >
+                    <Text color="text.primary" fontWeight="bold" fontSize="md" mb={4}>
+                      {exerciseProgress.exercise_name}
                     </Text>
-                    <Text color="text.secondary" fontSize="xs">
-                      Tag {workout.day_number}
-                    </Text>
-                    {workout.sets_completed && (
-                      <Text color="text.secondary" fontSize="xs">
-                        💪 {workout.sets_completed} Sets
+                    
+                    <HStack justify="space-between" mb={4}>
+                      <Text color="text.secondary" fontSize="sm">
+                        Verbesserung: 
+                        <Text as="span" color={exerciseProgress.overall_improvement >= 0 ? "green.400" : "red.400"} ml={1}>
+                          {exerciseProgress.overall_improvement > 0 ? '+' : ''}{exerciseProgress.overall_improvement.toFixed(1)}%
+                        </Text>
                       </Text>
-                    )}
-                    <Text color="text.secondary" fontSize="xs">
-                      � {workout.exercises?.length || 0} Übungen
-                    </Text>
-                  </Stack>
-                </Box>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* Progress Insights
-        <Box
-          p={6}
-          bg="bg.secondary"
-          borderColor="border"
-          borderWidth="1px"
-          rounded="lg"
-        >
-          <Heading size="md" color="text.primary" mb={6}>
-            🧠 Trainings-Insights
-          </Heading>
-          <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
-            <Box>
-              <Text color="accent.primary" fontWeight="bold" mb={2}>
-                📊 Gesamtfortschritt
-              </Text>
-              <Text color="text.secondary" fontSize="sm" lineHeight="1.6">
-                Du hast bereits {currentStats.totalWorkouts} Trainingstage
-                absolviert und dabei {totalSetsCompleted} Sets trainiert.
-              </Text>
+                      <Badge colorScheme={exerciseProgress.current_streak >= 3 ? "green" : "yellow"}>
+                        Streak: {exerciseProgress.current_streak}
+                      </Badge>
+                    </HStack>
+                    
+                    <Box height="200px">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={exerciseProgress.data_points}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="#9CA3AF"
+                            fontSize={12}
+                            tickFormatter={(date) => new Date(date).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })}
+                          />
+                          <YAxis 
+                            stroke="#9CA3AF"
+                            fontSize={12}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: '#1F2937',
+                              border: '1px solid #374151',
+                              borderRadius: '6px',
+                              color: '#F9FAFB'
+                            }}
+                            labelFormatter={(date) => new Date(date).toLocaleDateString('de-DE')}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="max_weight" 
+                            stroke="#3B82F6" 
+                            strokeWidth={2}
+                            dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                            name="Gewicht (kg)"
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="total_sets" 
+                            stroke="#10B981" 
+                            strokeWidth={2}
+                            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                            name="Sets"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  </Box>
+                ))}
+              </Grid>
             </Box>
+          )}
 
-            <Box>
-              <Text color="accent.primary" fontWeight="bold" mb={2}>
-                🎯 Nächste Ziele
-              </Text>
-              <Text color="text.secondary" fontSize="sm" lineHeight="1.6">
-                {currentStats.totalWorkouts < 10
-                  ? "Erreiche 10 Trainingstage für deinen ersten Meilenstein!"
-                  : currentStats.totalWorkouts < 25
-                  ? "Du bist auf dem Weg zu 25 Trainingstagen - bleib dran!"
-                  : "Großartig! Du bist ein echter Fitness-Profi!"}
-              </Text>
+          {/* Plan Statistics */}
+          {planStats && planStats.length > 0 && (
+            <Box
+              p={6}
+              bg="bg.secondary"
+              borderColor="border"
+              borderWidth="1px"
+              rounded="lg"
+            >
+              <Heading size="md" color="text.primary" mb={6}>
+                📋 Trainingsplan-Statistiken
+              </Heading>
+              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
+                {planStats.map((plan) => (
+                  <Box
+                    key={plan.plan_id}
+                    p={4}
+                    bg="bg.tertiary"
+                    rounded="md"
+                    borderColor="border"
+                    borderWidth="1px"
+                  >
+                    <Stack gap={3}>
+                      <Text color="text.primary" fontWeight="bold" fontSize="md">
+                        {plan.plan_title}
+                      </Text>
+                      
+                      <Stack gap={2}>
+                        <Stack direction="row" justify="space-between">
+                          <Text color="text.secondary" fontSize="sm">Workouts:</Text>
+                          <Text color="accent.primary" fontSize="sm" fontWeight="bold">
+                            {plan.total_workouts}
+                          </Text>
+                        </Stack>
+                        
+                        <Stack direction="row" justify="space-between">
+                          <Text color="text.secondary" fontSize="sm">Übungen:</Text>
+                          <Text color="text.primary" fontSize="sm">
+                            {plan.total_exercises}
+                          </Text>
+                        </Stack>
+                        
+                        <Stack direction="row" justify="space-between">
+                          <Text color="text.secondary" fontSize="sm">Vollständigkeit:</Text>
+                          <Text 
+                            color={plan.completion_rate >= 80 ? "green.500" : plan.completion_rate >= 50 ? "orange.500" : "red.500"} 
+                            fontSize="sm" 
+                            fontWeight="bold"
+                          >
+                            {plan.completion_rate}%
+                          </Text>
+                        </Stack>
+                      </Stack>
+                      
+                      {/* Completion Progress Bar */}
+                      <Box bg="bg.secondary" rounded="md" h="6px" overflow="hidden">
+                        <Box 
+                          bg={plan.completion_rate >= 80 ? "green.500" : plan.completion_rate >= 50 ? "orange.500" : "red.500"}
+                          h="100%"
+                          w={`${plan.completion_rate}%`}
+                          rounded="md"
+                          transition="width 0.3s ease"
+                        />
+                      </Box>
+                    </Stack>
+                  </Box>
+                ))}
+              </Grid>
             </Box>
-          </Grid>
-        </Box> */}
+          )}
+        </Stack>
       </Container>
     </Box>
   );

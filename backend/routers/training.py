@@ -199,48 +199,197 @@ def remove_exercises_from_day(day_id: int, exercise_ids: List[int], db: Session 
 # === Statistics ===
 @router.get("/statistics/", response_model=schemas.OverallStatistics)
 def get_statistics(db: Session = Depends(get_db)):
-    # Simple implementation without external service for now
+    # Basic workout statistics
     total_workouts = db.query(models.WorkingDay).count()
     exercises = db.query(models.Exercise).all()
     
-    # Create basic statistics
+    # Get last three workouts with plan information
+    last_three_workouts = db.query(models.WorkingDay).order_by(
+        desc(models.WorkingDay.id)
+    ).limit(3).all()
+    
     workout_stats = schemas.WorkoutStatistics(
         total_workouts=total_workouts,
         weekly_workouts=total_workouts,  # Simplified
         monthly_workouts=total_workouts,  # Simplified
-        last_three_workouts=[]
+        last_three_workouts=[schemas.WorkingDayRead.from_orm(w) for w in last_three_workouts]
     )
     
-    exercise_frequencies = []
-    exercise_stats = []
+    # Group exercises by name and collect detailed stats
+    exercise_groups = {}
+    exercise_plan_mapping = {}
     
     for exercise in exercises:
-        # Basic frequency counting
-        frequency = db.query(models.WorkingDay).join(
+        # Get plan information for each exercise
+        working_days = db.query(models.WorkingDay).join(
             models.working_day_exercise
+        ).join(
+            models.WorkingPlan
         ).filter(
             models.working_day_exercise.c.exercise_id == exercise.id
-        ).count()
+        ).all()
         
-        if frequency > 0:
+        plan_titles = list(set([wd.plan.title for wd in working_days if wd.plan]))
+        plan_title = plan_titles[0] if plan_titles else "Kein Plan"
+        
+        frequency = len(working_days)
+        exercise_name = exercise.title
+        total_sets = exercise.sets_completed or 0
+        
+        if exercise_name in exercise_groups:
+            exercise_groups[exercise_name]['frequency'] += frequency
+            exercise_groups[exercise_name]['total_sets'] += total_sets
+            exercise_groups[exercise_name]['total_workouts'] += frequency
+            # Track weights and reps for aggregation
+            if exercise.first_set_weight:
+                exercise_groups[exercise_name]['weights'].append(exercise.first_set_weight)
+            if exercise.first_set_reps:
+                exercise_groups[exercise_name]['reps'].append(exercise.first_set_reps)
+            if plan_title not in exercise_groups[exercise_name]['plan_title']:
+                exercise_groups[exercise_name]['plan_title'] += f", {plan_title}"
+        else:
+            exercise_groups[exercise_name] = {
+                'exercise_id': exercise.id,
+                'exercise_title': exercise_name,
+                'frequency': frequency,
+                'total_sets': total_sets,
+                'total_workouts': frequency,
+                'plan_title': plan_title,
+                'weights': [exercise.first_set_weight] if exercise.first_set_weight else [],
+                'reps': [exercise.first_set_reps] if exercise.first_set_reps else []
+            }
+    
+    # Create frequency and stats lists
+    exercise_frequencies = []
+    exercise_stats = []
+    extended_exercise_stats = []
+    
+    for exercise_name, data in exercise_groups.items():
+        if data['frequency'] > 0:
             exercise_frequencies.append(schemas.ExerciseFrequency(
-                exercise_id=exercise.id,
-                exercise_title=exercise.title,
-                frequency=frequency
+                exercise_id=data['exercise_id'],
+                exercise_title=f"{data['exercise_title']} ({data['plan_title']})",
+                frequency=data['total_sets']
             ))
         
         exercise_stats.append(schemas.ExerciseStatisticsRead(
-            exercise_id=exercise.id,
-            exercise_title=exercise.title,
-            total_workouts=frequency,
+            exercise_id=data['exercise_id'],
+            exercise_title=f"{data['exercise_title']} ({data['plan_title']})",
+            total_workouts=data['total_workouts'],
             weight_progression=[],
             last_workout_date=None
         ))
+        
+        # Extended stats with weight/reps info
+        weights = data['weights']
+        reps = data['reps']
+        
+        extended_exercise_stats.append(schemas.ExtendedExerciseStats(
+            exercise_id=data['exercise_id'],
+            exercise_title=data['exercise_title'],
+            plan_title=data['plan_title'],
+            total_workouts=data['total_workouts'],
+            total_sets=data['total_sets'],
+            max_weight=max(weights) if weights else None,
+            avg_weight=round(sum(weights) / len(weights), 1) if weights else None,
+            max_reps=max(reps) if reps else None,
+            avg_reps=round(sum(reps) / len(reps), 1) if reps else None,
+            last_workout_date=None
+        ))
+    
+    # Plan statistics
+    plans = db.query(models.WorkingPlan).all()
+    plan_statistics = []
+    
+    for plan in plans:
+        plan_workouts = db.query(models.WorkingDay).filter(
+            models.WorkingDay.plan_id == plan.id
+        ).count()
+        
+        total_exercises_in_plan = db.query(models.Exercise).join(
+            models.working_day_exercise
+        ).join(
+            models.WorkingDay
+        ).filter(
+            models.WorkingDay.plan_id == plan.id
+        ).distinct().count()
+        
+        completed_exercises = db.query(models.Exercise).join(
+            models.working_day_exercise
+        ).join(
+            models.WorkingDay
+        ).filter(
+            models.WorkingDay.plan_id == plan.id,
+            models.Exercise.sets_completed > 0
+        ).distinct().count()
+        
+        completion_rate = (completed_exercises / total_exercises_in_plan * 100) if total_exercises_in_plan > 0 else 0
+        
+        plan_statistics.append(schemas.PlanStatistics(
+            plan_id=plan.id,
+            plan_title=plan.title,
+            total_workouts=plan_workouts,
+            total_exercises=total_exercises_in_plan,
+            completion_rate=round(completion_rate, 1),
+            last_workout_date=None
+        ))
+    
+    # Sort lists
+    exercise_frequencies.sort(key=lambda x: x.frequency, reverse=True)
+    exercise_stats.sort(key=lambda x: x.total_workouts, reverse=True)
+    extended_exercise_stats.sort(key=lambda x: x.total_sets, reverse=True)
+    plan_statistics.sort(key=lambda x: x.total_workouts, reverse=True)
+    
+    # Progress Data for Line Charts - Gruppe exercises by name and track over time
+    progress_data = []
+    
+    for exercise_name, data in exercise_groups.items():
+        if data['weights']:  # Only include exercises with weight data
+            # Simulate timeline data based on exercise instances
+            # In real app, you'd track actual workout dates
+            all_exercise_instances = db.query(models.Exercise).filter(
+                models.Exercise.title == exercise_name,
+                models.Exercise.first_set_weight.isnot(None)
+            ).order_by(models.Exercise.id).all()
+            
+            data_points = []
+            improvement = 0
+            
+            for i, ex in enumerate(all_exercise_instances[:10]):  # Last 10 workouts
+                # Simulate dates (in real app use actual workout dates)
+                import datetime
+                date = (datetime.datetime.now() - datetime.timedelta(days=30-i*3)).strftime("%Y-%m-%d")
+                
+                data_points.append(schemas.ProgressDataPoint(
+                    date=date,
+                    exercise_name=exercise_name,
+                    max_weight=ex.first_set_weight,
+                    avg_weight=ex.first_set_weight,
+                    total_sets=ex.sets_completed or 1,
+                    total_reps=ex.first_set_reps or 10
+                ))
+            
+            # Calculate improvement (first vs last weight)
+            if len(data_points) > 1:
+                first_weight = data_points[0].max_weight or 0
+                last_weight = data_points[-1].max_weight or 0
+                if first_weight > 0:
+                    improvement = ((last_weight - first_weight) / first_weight) * 100
+            
+            progress_data.append(schemas.ExerciseProgress(
+                exercise_name=exercise_name,
+                data_points=data_points,
+                overall_improvement=round(improvement, 1),
+                current_streak=len(data_points)
+            ))
     
     return schemas.OverallStatistics(
         workout_stats=workout_stats,
         exercise_frequencies=exercise_frequencies,
-        exercise_stats=exercise_stats
+        exercise_stats=exercise_stats,
+        extended_exercise_stats=extended_exercise_stats,
+        plan_statistics=plan_statistics,
+        progress_data=progress_data
     )
 
 @router.get("/statistics/exercise/{exercise_id}", response_model=schemas.ExerciseStatisticsRead)
