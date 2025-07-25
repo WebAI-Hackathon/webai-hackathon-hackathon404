@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://webai-hackathon-hackathon404.onrender.com";
 
 // Types basierend auf Backend Schemas
 export interface Exercise {
