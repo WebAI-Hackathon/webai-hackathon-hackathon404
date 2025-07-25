@@ -63,11 +63,11 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
           transform="translate(-50%, -50%)"
           textAlign="center"
         >
-          <Text fontSize="lg" fontWeight="bold" color="gray.800">
+          <Text fontSize="lg" fontWeight="bold" color="orange">
             {Math.round(percentage)}%
           </Text>
           {value && (
-            <Text fontSize="sm" color="gray.600">
+            <Text fontSize="sm" color="orange">
               {value}
             </Text>
           )}
@@ -75,7 +75,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
       </Box>
 
       {label && (
-        <Text fontSize="sm" textAlign="center" color="gray.700" maxW="120px">
+        <Text fontSize="sm" textAlign="center" color="orange" maxW="120px">
           {label}
         </Text>
       )}

@@ -124,7 +124,6 @@ const Header = () => {
               <RouterLink to="/" style={{ textDecoration: "none" }}>
                 <Heading size="lg" color="accent.primary" fontWeight="bold">
                   <Flex align="center" gap={2}>
-                    <FaWeight />
                     Planetic Gym
                   </Flex>
                 </Heading>
