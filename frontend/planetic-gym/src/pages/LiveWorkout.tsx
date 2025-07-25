@@ -33,6 +33,7 @@ import {
   FaDumbbell,
 } from "react-icons/fa";
 import { Tool } from "../components/Tool";
+import RunningAnimation from "../components/RunningAnimation";
 import { apiService } from "../services/api";
 import type { WorkingDay, Exercise, WorkingPlan } from "../services/api";
 
@@ -1578,8 +1579,12 @@ const LiveWorkout = () => {
         {/* Workout Header */}
         <Stack gap={4} textAlign="center" mb={12}>
           <Heading size="2xl" color="text.primary">
-            <Flex align="center" justify="center" gap={3}>
-              <FaRunning />
+            <Flex
+              align="center"
+              justify="center"
+              gap={isWorkoutActive ? 0.5 : 3}
+            >
+              {isWorkoutActive ? <RunningAnimation size={55} /> : <FaRunning />}
               Live Workout
             </Flex>
           </Heading>
