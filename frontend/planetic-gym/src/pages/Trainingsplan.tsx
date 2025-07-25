@@ -21,7 +21,6 @@ import {
 } from "@chakra-ui/react";
 import {
   FaDumbbell,
-  FaPlay,
   FaEdit,
   FaFilePdf,
   FaPlus,
@@ -717,13 +716,6 @@ const Trainingsplan = () => {
     }
   };
 
-  const handleStartWorkout = (event: Event) => {
-    const details = (event as CustomEvent).detail;
-    // Store dayId in localStorage instead of URL parameter
-    localStorage.setItem("selectedDayId", details.dayId);
-    window.location.href = `/#/live-workout`;
-  };
-
   const handleEditWeek = async (event: Event) => {
     const details = (event as CustomEvent).detail;
     try {
@@ -1078,20 +1070,6 @@ const Trainingsplan = () => {
         />
       </Tool>
 
-      <Tool
-        name="start_workout"
-        description="Starts a workout for a specific day"
-        onCall={handleStartWorkout}
-      >
-        {/* @ts-ignore */}
-        <prop
-          name="dayId"
-          type="string"
-          required
-          description="ID of the training day to start"
-        />
-      </Tool>
-
       <Container maxW="6xl">
         <Stack gap={4} textAlign="center" mb={12}>
           <Flex align="center" justify="center" gap={3}>
@@ -1306,27 +1284,6 @@ const Trainingsplan = () => {
                               </Box>
 
                               <Flex gap={2}>
-                                <Button
-                                  bg="accent.primary"
-                                  color="white"
-                                  _hover={{ bg: "accent.secondary" }}
-                                  size="sm"
-                                  flex="1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Store dayId in localStorage instead of URL parameter
-                                    localStorage.setItem(
-                                      "selectedDayId",
-                                      day.id
-                                    );
-                                    window.location.href = `/#/live-workout`;
-                                  }}
-                                >
-                                  <Flex align="center" gap={1}>
-                                    <FaPlay size="0.8rem" />
-                                    <Text fontSize="xs">Start</Text>
-                                  </Flex>
-                                </Button>
                                 <Button
                                   bg="blue.500"
                                   color="white"

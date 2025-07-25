@@ -1584,22 +1584,6 @@ const LiveWorkout = () => {
       </Tool>
 
       <Container maxW="6xl">
-        {/* Back to Training Plans Button */}
-        <Flex justify="flex-start" mb={6}>
-          <Button
-            size="sm"
-            bg="orange.500"
-            color="white"
-            _hover={{ bg: "orange.600" }}
-            onClick={() => (window.location.href = "/#/trainingsplan")}
-          >
-            <Flex align="center" gap={2}>
-              <FaArrowLeft />
-              Back to Training Plans
-            </Flex>
-          </Button>
-        </Flex>
-
         {/* Workout Header */}
         <Stack gap={4} textAlign="center" mb={12}>
           <Heading size="2xl" color="text.primary">
