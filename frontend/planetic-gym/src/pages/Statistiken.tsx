@@ -18,11 +18,7 @@ import {
   FaChartBar,
   FaTrophy,
   FaWeight,
-  FaCalendarAlt,
   FaDumbbell,
-  FaFire,
-  FaCheckCircle,
-  FaClock,
   FaClipboardList,
 } from "react-icons/fa";
 import DotLoadingAnimation from "../components/DotLoadingAnimation";
