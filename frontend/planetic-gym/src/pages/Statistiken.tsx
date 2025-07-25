@@ -7,7 +7,6 @@ import {
   Badge,
   Container,
   Stack,
-  Spinner,
   Grid,
   Button,
   Flex,
@@ -26,6 +25,7 @@ import {
   FaClock,
   FaClipboardList,
 } from "react-icons/fa";
+import DotLoadingAnimation from "../components/DotLoadingAnimation";
 import {
   LineChart,
   Line,
@@ -116,9 +116,8 @@ const Statistiken = () => {
       }
 
       // PDF speichern
-      const fileName = `Training-statistics_${
-        new Date().toISOString().split("T")[0]
-      }.pdf`;
+      const fileName = `Training-statistics_${new Date().toISOString().split("T")[0]
+        }.pdf`;
       pdf.save(fileName);
 
       return fileName;
@@ -159,6 +158,11 @@ const Statistiken = () => {
     }
   };
 
+  // Hilfsfunktion für künstlichen Delay
+  const addDelay = async () => {
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden Delay
+  };
+
   // Context für AI
   const statisticsContext = () => {
     if (!overallStats) {
@@ -173,6 +177,7 @@ const Statistiken = () => {
     setError(null);
 
     try {
+      await addDelay(); // Füge 2 Sekunden Delay hinzu
       const stats = await apiService.getOverallStatistics();
       setOverallStats(stats);
 
@@ -208,6 +213,7 @@ const Statistiken = () => {
     setError(null);
 
     try {
+      await addDelay(); // Füge 2 Sekunden Delay hinzu
       const stats = await apiService.getOverallStatistics();
       setExerciseFrequencies(stats.exercise_frequencies);
 
@@ -244,6 +250,7 @@ const Statistiken = () => {
     setError(null);
 
     try {
+      await addDelay(); // Füge 2 Sekunden Delay hinzu
       const stats = await apiService.getOverallStatistics();
       setProgressData(stats.progress_data || []);
 
@@ -283,6 +290,7 @@ const Statistiken = () => {
     setError(null);
 
     try {
+      await addDelay(); // Füge 2 Sekunden Delay hinzu
       const stats = await apiService.getOverallStatistics();
       setPlanStats(stats.plan_statistics);
 
@@ -389,7 +397,7 @@ const Statistiken = () => {
 
             {loading && (
               <Stack gap={4} textAlign="center" align="center">
-                <Spinner size="xl" color="accent.primary" />
+                <DotLoadingAnimation />
                 <Text>Load statistics...</Text>
               </Stack>
             )}
@@ -439,6 +447,10 @@ const Statistiken = () => {
                   <Text>• "Show exercise frequencies"</Text>
                   <Text>• "Show my progress diagrams"</Text>
                   <Text>• "How are my training plan statistics?"</Text>
+                  <Text>• "Show my progress diagrams"</Text>
+                  <Text>
+                    • "How are my training plan statistics?"
+                  </Text>
                 </Box>
               </Box>
             )}
@@ -517,7 +529,7 @@ const Statistiken = () => {
                           0
                         ) /
                           100) *
-                          100,
+                        100,
                         100
                       )}
                       color="#EF4444"
@@ -539,9 +551,8 @@ const Statistiken = () => {
                       )}
                       color="#8B5CF6"
                       label="Weight Progress"
-                      value={`${
-                        progressData[0].overall_improvement > 0 ? "+" : ""
-                      }${progressData[0].overall_improvement.toFixed(1)}%`}
+                      value={`${progressData[0].overall_improvement > 0 ? "+" : ""
+                        }${progressData[0].overall_improvement.toFixed(1)}%`}
                       size={100}
                     />
                   )}
@@ -622,8 +633,8 @@ const Statistiken = () => {
                             index < 3
                               ? "green.500"
                               : index < 6
-                              ? "yellow.500"
-                              : "gray.500"
+                                ? "yellow.500"
+                                : "gray.500"
                           }
                           h="100%"
                           w={`${Math.min(
@@ -631,7 +642,7 @@ const Statistiken = () => {
                               Math.max(
                                 ...exerciseFrequencies.map((e) => e.frequency)
                               )) *
-                              100,
+                            100,
                             100
                           )}%`}
                           rounded="md"
@@ -845,8 +856,8 @@ const Statistiken = () => {
                                 plan.completion_rate >= 80
                                   ? "green.500"
                                   : plan.completion_rate >= 50
-                                  ? "orange.500"
-                                  : "red.500"
+                                    ? "orange.500"
+                                    : "red.500"
                               }
                               fontSize="sm"
                               fontWeight="bold"
@@ -868,8 +879,8 @@ const Statistiken = () => {
                               plan.completion_rate >= 80
                                 ? "green.500"
                                 : plan.completion_rate >= 50
-                                ? "orange.500"
-                                : "red.500"
+                                  ? "orange.500"
+                                  : "red.500"
                             }
                             h="100%"
                             w={`${plan.completion_rate}%`}
