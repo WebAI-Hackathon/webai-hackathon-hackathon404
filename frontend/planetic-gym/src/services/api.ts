@@ -112,6 +112,19 @@ class ApiService {
     return this.request(`/api/training/plan/${planId}`);
   }
 
+  async updateWorkingPlan(
+    planId: number,
+    updates: {
+      title?: string;
+      description?: string;
+    }
+  ): Promise<WorkingPlan> {
+    return this.request(`/api/training/plan/${planId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  }
+
   async deleteWorkingPlan(planId: number): Promise<{ message: string }> {
     return this.request(`/api/training/plan/${planId}`, {
       method: "DELETE",
@@ -179,7 +192,7 @@ class ApiService {
 
   // Statistics endpoints
   async getOverallStatistics(): Promise<OverallStatistics> {
-    return this.request('/api/training/statistics/');
+    return this.request("/api/training/statistics/");
   }
 
   async getExerciseStatistics(exerciseId: number): Promise<ExerciseStatistics> {
@@ -187,15 +200,22 @@ class ApiService {
   }
 
   async getExerciseFrequency(days: number = 30): Promise<ExerciseFrequency[]> {
-    return this.request(`/api/training/statistics/exercise-frequency?days=${days}`);
+    return this.request(
+      `/api/training/statistics/exercise-frequency?days=${days}`
+    );
   }
 
-  async getWeightProgression(exerciseId: number, limit: number = 20): Promise<WeightProgressionPoint[]> {
-    return this.request(`/api/training/statistics/weight-progression/${exerciseId}?limit=${limit}`);
+  async getWeightProgression(
+    exerciseId: number,
+    limit: number = 20
+  ): Promise<WeightProgressionPoint[]> {
+    return this.request(
+      `/api/training/statistics/weight-progression/${exerciseId}?limit=${limit}`
+    );
   }
 
   async getWorkoutStatistics(): Promise<WorkoutStatistics> {
-    return this.request('/api/training/statistics/workout-count');
+    return this.request("/api/training/statistics/workout-count");
   }
 
   async addExercisesToDay(

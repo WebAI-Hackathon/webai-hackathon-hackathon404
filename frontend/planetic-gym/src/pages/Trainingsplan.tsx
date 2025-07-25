@@ -13,6 +13,11 @@ import {
   Input,
   Textarea,
   Spinner,
+  IconButton,
+  MenuTrigger,
+  MenuRoot,
+  MenuContent,
+  MenuItem,
 } from "@chakra-ui/react";
 import { Tool } from "../components/Tool";
 import { apiService } from "../services/api";
@@ -45,8 +50,10 @@ const Trainingsplan = () => {
   const [showNewWeekDialog, setShowNewWeekDialog] = useState(false);
   const [showNewDayDialog, setShowNewDayDialog] = useState(false);
   const [showEditDayDialog, setShowEditDayDialog] = useState(false);
+  const [showEditWeekDialog, setShowEditWeekDialog] = useState(false);
   const [currentWeekId, setCurrentWeekId] = useState<string>("");
   const [editingDay, setEditingDay] = useState<TrainingDay | null>(null);
+  const [editingWeek, setEditingWeek] = useState<TrainingWeek | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newWeekData, setNewWeekData] = useState({
@@ -192,6 +199,47 @@ const Trainingsplan = () => {
       exercises: [...day.exercises],
     });
     setShowEditDayDialog(true);
+  };
+
+  const editWeek = (week: TrainingWeek) => {
+    setEditingWeek(week);
+    setNewWeekData({
+      name: week.name,
+      description: week.description,
+    });
+    setShowEditWeekDialog(true);
+  };
+
+  const updateWeek = async () => {
+    if (!editingWeek) return;
+
+    try {
+      await apiService.updateWorkingPlan(parseInt(editingWeek.id), {
+        title: newWeekData.name || editingWeek.name,
+        description: newWeekData.description || editingWeek.description,
+      });
+
+      setShowEditWeekDialog(false);
+      setEditingWeek(null);
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error updating week:", error);
+      setError("Fehler beim Aktualisieren der Trainingswoche");
+    }
+  };
+
+  const deleteWeek = async (weekId: string) => {
+    try {
+      const weekIdNum = parseInt(weekId);
+      if (!isNaN(weekIdNum)) {
+        await apiService.deleteWorkingPlan(weekIdNum);
+        await refreshData();
+      }
+    } catch (error) {
+      console.error("Error deleting week:", error);
+      setError("Fehler beim Löschen der Trainingswoche");
+    }
   };
 
   const updateDay = async () => {
@@ -524,6 +572,29 @@ const Trainingsplan = () => {
     window.location.href = `/live-workout?dayId=${details.dayId}`;
   };
 
+  const handleEditWeek = async (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    try {
+      // Update WorkingPlan im Backend
+      const weekUpdateData: any = {};
+      if (details.name) weekUpdateData.title = details.name;
+      if (details.description) weekUpdateData.description = details.description;
+
+      if (Object.keys(weekUpdateData).length > 0) {
+        await apiService.updateWorkingPlan(
+          parseInt(details.weekId),
+          weekUpdateData
+        );
+      }
+
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error updating week:", error);
+      setError("Fehler beim Aktualisieren der Trainingswoche");
+    }
+  };
+
   return (
     <Box py={8}>
       {/* VOIX Context Elements */}
@@ -801,6 +872,32 @@ const Trainingsplan = () => {
       </Tool>
 
       <Tool
+        name="edit_training_week"
+        description="Bearbeitet eine bestehende Trainingswoche"
+        onCall={handleEditWeek}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID der zu bearbeitenden Trainingswoche"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          description="Neuer Name der Trainingswoche"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="description"
+          type="string"
+          description="Neue Beschreibung der Trainingswoche"
+        />
+      </Tool>
+
+      <Tool
         name="start_workout"
         description="Startet ein Training für einen bestimmten Tag"
         onCall={handleStartWorkout}
@@ -896,15 +993,39 @@ const Trainingsplan = () => {
                       </Heading>
                       <Text color="text.secondary">{week.description}</Text>
                     </Stack>
-                    <Button
-                      onClick={() => addNewDay(week.id)}
-                      bg="accent.primary"
-                      color="white"
-                      _hover={{ bg: "accent.secondary" }}
-                      size="sm"
-                    >
-                      ➕ Tag hinzufügen
-                    </Button>
+                    <Flex gap={2} align="center">
+                      <MenuRoot>
+                        <MenuTrigger asChild>
+                          <IconButton
+                            variant="ghost"
+                            size="sm"
+                            aria-label="Trainingsplan bearbeiten"
+                          >
+                            ⚙️
+                          </IconButton>
+                        </MenuTrigger>
+                        <MenuContent>
+                          <MenuItem onClick={() => editWeek(week)}>
+                            ✏️ Bearbeiten
+                          </MenuItem>
+                          <MenuItem
+                            onClick={() => deleteWeek(week.id)}
+                            color="red.600"
+                          >
+                            🗑️ Löschen
+                          </MenuItem>
+                        </MenuContent>
+                      </MenuRoot>
+                      <Button
+                        onClick={() => addNewDay(week.id)}
+                        bg="accent.primary"
+                        color="white"
+                        _hover={{ bg: "accent.secondary" }}
+                        size="sm"
+                      >
+                        ➕ Tag hinzufügen
+                      </Button>
+                    </Flex>
                   </Flex>
 
                   {week.days.length > 0 ? (
@@ -1185,6 +1306,93 @@ const Trainingsplan = () => {
                     _hover={{ bg: "accent.secondary" }}
                   >
                     Erstellen
+                  </Button>
+                </Flex>
+              </Stack>
+            </Box>
+          </Box>
+        )}
+
+        {/* Dialog für Trainingswoche bearbeiten */}
+        {showEditWeekDialog && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            right="0"
+            bottom="0"
+            bg="blackAlpha.600"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="1000"
+          >
+            <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
+              <Stack gap={4}>
+                <Heading size="md" color="text.primary">
+                  Trainingswoche bearbeiten
+                </Heading>
+
+                <Stack gap={3}>
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Name der Woche:
+                    </Text>
+                    <Input
+                      value={newWeekData.name}
+                      onChange={(e) =>
+                        setNewWeekData({ ...newWeekData, name: e.target.value })
+                      }
+                      placeholder="z.B. Kraft Woche 1"
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Beschreibung:
+                    </Text>
+                    <Textarea
+                      value={newWeekData.description}
+                      onChange={(e) =>
+                        setNewWeekData({
+                          ...newWeekData,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Beschreibung der Trainingswoche..."
+                    />
+                  </Box>
+                </Stack>
+
+                <Flex gap={3} justify="end">
+                  <Button
+                    onClick={() => {
+                      setShowEditWeekDialog(false);
+                      setEditingWeek(null);
+                    }}
+                    bg="gray.500"
+                    color="white"
+                    _hover={{ bg: "gray.600" }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button
+                    onClick={updateWeek}
+                    bg="accent.primary"
+                    color="white"
+                    _hover={{ bg: "accent.secondary" }}
+                  >
+                    Speichern
                   </Button>
                 </Flex>
               </Stack>

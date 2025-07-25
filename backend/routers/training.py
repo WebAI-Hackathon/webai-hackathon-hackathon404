@@ -61,6 +61,19 @@ def get_plan(plan_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Plan not found")
     return plan
 
+@router.put("/plan/{plan_id}", response_model=schemas.WorkingPlanRead)
+def update_plan(plan_id: int, plan_update: schemas.WorkingPlanUpdate, db: Session = Depends(get_db)):
+    db_plan = db.query(models.WorkingPlan).filter(models.WorkingPlan.id == plan_id).first()
+    if not db_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    for field, value in plan_update.dict(exclude_unset=True).items():
+        setattr(db_plan, field, value)
+    
+    db.commit()
+    db.refresh(db_plan)
+    return db_plan
+
 @router.delete("/plan/{plan_id}")
 def delete_plan(plan_id: int, db: Session = Depends(get_db)):
     plan = db.query(models.WorkingPlan).filter(models.WorkingPlan.id == plan_id).first()

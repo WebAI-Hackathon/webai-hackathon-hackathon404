@@ -58,6 +58,10 @@ class WorkingPlanBase(BaseModel):
 class WorkingPlanCreate(WorkingPlanBase):
     pass
 
+class WorkingPlanUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+
 class WorkingPlanRead(WorkingPlanBase):
     id: int
     created_at: datetime
