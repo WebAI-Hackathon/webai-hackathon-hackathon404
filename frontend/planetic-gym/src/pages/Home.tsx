@@ -16,21 +16,21 @@ const Home = () => {
   const features = [
     {
       icon: "📋",
-      title: "Personalisierte Trainingspläne",
+      title: "Personalized Training Plans",
       description:
-        "Individuelle Pläne, die sich an deine Ziele und dein Fitnesslevel anpassen",
+        "Individual plans tailored to your goals and fitness level",
     },
     {
       icon: "🏃‍♂️",
       title: "Live Workouts",
       description:
-        "Trainiere in Echtzeit mit unserer interaktiven Workout-Führung",
+        "Train in real-time with our interactive workout guidance",
     },
     {
       icon: "📊",
-      title: "Detaillierte Statistiken",
+      title: "Detailed Statistics",
       description:
-        "Verfolge deinen Fortschritt und erkenne deine Verbesserungen",
+        "Follow your progress and see your improvements",
     },
   ];
 
@@ -39,7 +39,7 @@ const Home = () => {
     navigate("/trainingsplan");
     (event.target as any).dispatchEvent(new CustomEvent('return', { 
       detail: {
-        message: "Trainingsplan erfolgreich gestartet",
+        message: "Training plan generation started",
         action: "start_training_plan"
       }
     }));
@@ -49,7 +49,7 @@ const Home = () => {
     navigate("/live-workout");
     (event.target as any).dispatchEvent(new CustomEvent('return', { 
       detail: {
-        message: "Live Workout erfolgreich gestartet",
+        message: "Live workout started successfully",
         action: "start_live_workout"
       }
     }));
@@ -59,7 +59,7 @@ const Home = () => {
     navigate("/statistiken");
     (event.target as any).dispatchEvent(new CustomEvent('return', { 
       detail: {
-        message: "Statistiken erfolgreich geöffnet",
+        message: "Statistics opened successfully",
         action: "view_statistics"
       }
     }));
@@ -72,28 +72,28 @@ const Home = () => {
       {/* VOIX Quick Start Tools */}
       <Tool 
         name="start_training_plan" 
-        description="Starte einen neuen Trainingsplan oder öffne bestehenden Plan"
+        description="Start a new training plan or open an existing one"
         onCall={handleStartTrainingPlan}
         return
       />
       
       <Tool 
         name="start_live_workout" 
-        description="Starte ein Live Workout-Training"
+        description="Start a live workout session"
         onCall={handleStartLiveWorkout}
         return
       />
       
       <Tool 
         name="view_statistics" 
-        description="Öffne die Trainingsstatistiken und Fortschrittsanzeige"
+        description="Open the training statistics and progress display"
         onCall={handleViewStatistics}
         return
       />
 
       {/* Context für AI */}
       <div data-context="fitness_app_home">
-        Willkommen bei Planetic Gym! Verfügbare Aktionen: Trainingsplan starten, Live Workout beginnen, Statistiken anzeigen. Die App bietet personalisierte Trainingspläne, interaktive Live Workouts und detaillierte Fortschrittsverfolgung.
+        Welcome to Planetic Gym! Available actions: Start training plan, Begin live workout, View statistics. The app offers personalized training plans, interactive live workouts, and detailed progress tracking.
       </div>
 
       <Box>
@@ -113,7 +113,7 @@ const Home = () => {
               color="text.primary"
               lineHeight="1.2"
             >
-              Willkommen bei{" "}
+              Welcome to{" "}
               <Text as="span" color="accent.primary">
                 Planetic Gym
               </Text>
@@ -126,8 +126,7 @@ const Home = () => {
               lineHeight="1.6"
               mx="auto"
             >
-              Deine persönliche Fitness-Plattform für optimale
-              Trainingsergebnisse
+              Your personal fitness platform for optimal training results
             </Text>
 
             <Stack
@@ -147,7 +146,7 @@ const Home = () => {
                 fontWeight="bold"
               >
                 <RouterLink to="/trainingsplan">
-                  Trainingsplan starten
+                  Start Training 
                 </RouterLink>
               </Button>
               <Button
@@ -174,7 +173,7 @@ const Home = () => {
           <Stack gap={16}>
             <Stack gap={4} textAlign="center">
               <Heading size="2xl" color="text.primary">
-                Warum Planetic Gym?
+                Why Planetic Gym?
               </Heading>
             </Stack>
 
