@@ -1,12 +1,5 @@
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import {
-  Box,
-  Container,
-  Flex,
-  Heading,
-  Button,
-  Stack,
-} from "@chakra-ui/react";
+import { Box, Container, Flex, Heading, Button, Stack } from "@chakra-ui/react";
 import { Tool } from "./Tool";
 
 const Header = () => {
@@ -22,70 +15,78 @@ const Header = () => {
   // VOIX Navigation Tools
   const handleNavigateToTrainingPlan = async (event: Event) => {
     navigate("/trainingsplan");
-    (event.target as any).dispatchEvent(new CustomEvent('return', { 
-      detail: {
-        message: "Navigation zu Trainingsplan erfolgreich",
-        page: "trainingsplan"
-      }
-    }));
+    (event.target as any).dispatchEvent(
+      new CustomEvent("return", {
+        detail: {
+          message: "Navigation zu Trainingsplan erfolgreich",
+          page: "trainingsplan",
+        },
+      })
+    );
   };
 
   const handleNavigateToLiveWorkout = async (event: Event) => {
     navigate("/live-workout");
-    (event.target as any).dispatchEvent(new CustomEvent('return', { 
-      detail: {
-        message: "Navigation zu Live Workout erfolgreich",
-        page: "live-workout"
-      }
-    }));
+    (event.target as any).dispatchEvent(
+      new CustomEvent("return", {
+        detail: {
+          message: "Navigation zu Live Workout erfolgreich",
+          page: "live-workout",
+        },
+      })
+    );
   };
 
   const handleNavigateToStatistics = async (event: Event) => {
     navigate("/statistiken");
-    (event.target as any).dispatchEvent(new CustomEvent('return', { 
-      detail: {
-        message: "Navigation zu Statistiken erfolgreich",
-        page: "statistiken"
-      }
-    }));
+    (event.target as any).dispatchEvent(
+      new CustomEvent("return", {
+        detail: {
+          message: "Navigation zu Statistiken erfolgreich",
+          page: "statistiken",
+        },
+      })
+    );
   };
 
   const handleNavigateToHome = async (event: Event) => {
     navigate("/");
-    (event.target as any).dispatchEvent(new CustomEvent('return', { 
-      detail: {
-        message: "Navigation zur Startseite erfolgreich",
-        page: "home"
-      }
-    }));
+    (event.target as any).dispatchEvent(
+      new CustomEvent("return", {
+        detail: {
+          message: "Navigation zur Startseite erfolgreich",
+          page: "home",
+        },
+      })
+    );
   };
 
   return (
     <>
       {/* VOIX Navigation Tools */}
-      <Tool 
-        name="navigate_to_training_plan" 
+      <Tool
+        name="navigate_to_training_plan"
         description="Navigiere zur Trainingsplan-Seite"
         onCall={handleNavigateToTrainingPlan}
         return
       />
-      
-      <Tool 
-        name="navigate_to_live_workout" 
+
+      <Tool
+        name="navigate_to_live_workout"
         description="Navigiere zur Live Workout-Seite"
         onCall={handleNavigateToLiveWorkout}
         return
       />
-      
-      <Tool 
-        name="navigate_to_statistics" 
+
+      <Tool
+        name="navigate_to_statistics"
         description="Navigiere zur Statistiken-Seite"
         onCall={handleNavigateToStatistics}
         return
       />
-      
-      <Tool 
-        name="navigate_to_home" 
+
+      <Tool
+        name="navigate_to_home"
         description="Navigiere zur Startseite"
         onCall={handleNavigateToHome}
         return
@@ -93,7 +94,9 @@ const Header = () => {
 
       {/* Context für AI */}
       <div data-context="navigation">
-        Aktuelle Seite: {location.pathname}. Verfügbare Navigationsziele: Startseite (/), Trainingsplan (/trainingsplan), Live Workout (/live-workout), Statistiken (/statistiken).
+        Aktuelle Seite: {location.pathname}. Verfügbare Navigationsziele:
+        Startseite (/), Trainingsplan (/trainingsplan), Live Workout
+        (/live-workout), Statistiken (/statistiken).
       </div>
 
       <Box
@@ -108,48 +111,49 @@ const Header = () => {
         borderColor="border"
         backdropFilter="blur(10px)"
       >
-      <Container maxW="7xl" py={4}>
-        <Flex align="center">
-          {/* Logo further left */}
-          <Box mr={12}>
-            <RouterLink 
-              to="/"
-              style={{ textDecoration: "none" }}
-            >
-              <Heading size="lg" color="accent.primary" fontWeight="bold">
-                💪 Planetic Gym
-              </Heading>
-            </RouterLink>
-          </Box>
+        <Container maxW="7xl" py={4}>
+          <Flex align="center">
+            {/* Logo further left */}
+            <Box mr={12}>
+              <RouterLink to="/" style={{ textDecoration: "none" }}>
+                <Heading size="lg" color="accent.primary" fontWeight="bold">
+                  💪 Planetic Gym
+                </Heading>
+              </RouterLink>
+            </Box>
 
-          {/* Spacer pushes nav to right */}
-          <Box flex={1} />
+            {/* Spacer pushes nav to right */}
+            <Box flex={1} />
 
-          <Stack direction="row" gap={6} pr={2}>
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <RouterLink key={item.path} to={item.path} style={{ textDecoration: "none" }}>
-                  <Button
-                    variant={isActive ? "solid" : "ghost"}
-                    bg={isActive ? "accent.primary" : "transparent"}
-                    color={isActive ? "white" : "text.primary"}
-                    _hover={{
-                      bg: isActive ? "accent.secondary" : "bg.tertiary",
-                      color: isActive ? "white" : "accent.primary",
-                    }}
-                    size="md"
-                    fontWeight={isActive ? "bold" : "medium"}
+            <Stack direction="row" gap={6} pr={2}>
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <RouterLink
+                    key={item.path}
+                    to={item.path}
+                    style={{ textDecoration: "none" }}
                   >
-                    {item.label}
-                  </Button>
-                </RouterLink>
-              );
-            })}
-          </Stack>
-        </Flex>
-      </Container>
-    </Box>
+                    <Button
+                      variant={isActive ? "solid" : "ghost"}
+                      bg={isActive ? "accent.primary" : "transparent"}
+                      color={isActive ? "white" : "text.primary"}
+                      _hover={{
+                        bg: isActive ? "accent.secondary" : "bg.tertiary",
+                        color: isActive ? "white" : "accent.primary",
+                      }}
+                      size="md"
+                      fontWeight={isActive ? "bold" : "medium"}
+                    >
+                      {item.label}
+                    </Button>
+                  </RouterLink>
+                );
+              })}
+            </Stack>
+          </Flex>
+        </Container>
+      </Box>
     </>
   );
 };

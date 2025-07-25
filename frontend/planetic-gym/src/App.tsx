@@ -30,10 +30,9 @@ function App() {
         <Box as="main" pt="80px">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="webai-hackathon-hackathon404/" element={<Home />} />
-            <Route path="webai-hackathon-hackathon404/trainingsplan" element={<Trainingsplan />} />
-            <Route path="webai-hackathon-hackathon404/live-workout" element={<LiveWorkout />} />
-            <Route path="webai-hackathon-hackathon404/statistiken" element={<Statistiken />} />
+            <Route path="/trainingsplan" element={<Trainingsplan />} />
+            <Route path="/live-workout" element={<LiveWorkout />} />
+            <Route path="/statistiken" element={<Statistiken />} />
           </Routes>
         </Box>
       </Box>
