@@ -719,8 +719,9 @@ const Trainingsplan = () => {
 
   const handleStartWorkout = (event: Event) => {
     const details = (event as CustomEvent).detail;
-    // Navigation logic could be implemented here
-    window.location.href = `/live-workout?dayId=${details.dayId}`;
+    // Store dayId in localStorage instead of URL parameter
+    localStorage.setItem("selectedDayId", details.dayId);
+    window.location.href = `/#/live-workout`;
   };
 
   const handleEditWeek = async (event: Event) => {
@@ -751,8 +752,8 @@ const Trainingsplan = () => {
     try {
       // Finde den Tag und die Woche anhand der dayId
       const targetDay = trainingWeeks
-        .flatMap((week) => 
-          week.days.map(day => ({ day, weekName: week.name }))
+        .flatMap((week) =>
+          week.days.map((day) => ({ day, weekName: week.name }))
         )
         .find(({ day }) => day.id === details.dayId);
 
@@ -785,9 +786,7 @@ const Trainingsplan = () => {
       {/* @ts-ignore */}
       <context name="appState">
         The app currently shows {trainingWeeks.length} training weeks.
-        {selectedDay
-          ? `Day ${selectedDay} is selected.`
-          : "No day selected."}
+        {selectedDay ? `Day ${selectedDay} is selected.` : "No day selected."}
         {showNewWeekDialog ? "Dialog for new week is open." : ""}
         {showNewDayDialog ? "Dialog for new day is open." : ""}
         {showEditDayDialog ? "Dialog for editing day is open." : ""}
@@ -881,153 +880,149 @@ const Trainingsplan = () => {
         </prop>
       </Tool>
 
-<Tool
-  name="create_training_week"
-  description="Creates a new training week with name and description"
-  onCall={handleCreateWeek}
->
-  {/* @ts-ignore */}
-  <prop
-    name="name"
-    type="string"
-    required
-    description="Name of the new training week"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="description"
-    type="string"
-    description="Description of the training week"
-  />
-</Tool>
-
-<Tool
-  name="create_training_day"
-  description="Creates a new training day in a specific week"
-  onCall={handleCreateDay}
->
-  {/* @ts-ignore */}
-  <prop
-    name="weekId"
-    type="string"
-    required
-    description="ID of the week to which the day should be added"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="name"
-    type="string"
-    required
-    description="Name of the training day"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="focus"
-    type="string"
-    required
-    description="Training focus (e.g. upper body, lower body, full body)"
-  />
-  {/* @ts-ignore */}
-  <prop name="exercises" type="array" description="List of exercises">
-    {/* @ts-ignore */}
-    <array>
-      {/* @ts-ignore */}
-      <dict>
+      <Tool
+        name="create_training_week"
+        description="Creates a new training week with name and description"
+        onCall={handleCreateWeek}
+      >
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           required
-          description="Name of the exercise"
+          description="Name of the new training week"
         />
         {/* @ts-ignore */}
         <prop
-          name="repetitions"
-          type="number"
-          required
-          description="Number of repetitions"
+          name="description"
+          type="string"
+          description="Description of the training week"
         />
-        {/* @ts-ignore */}
-        <prop
-          name="weight"
-          type="number"
-          description="Weight in kg (default: 0)"
-        />
-        {/* @ts-ignore */}
-      </dict>
-      {/* @ts-ignore */}
-    </array>
-    {/* @ts-ignore */}
-  </prop>
-</Tool>
+      </Tool>
 
-<Tool
-  name="edit_training_day"
-  description="Edits an existing training day"
-  onCall={handleEditDay}
->
-  {/* @ts-ignore */}
-  <prop
-    name="dayId"
-    type="string"
-    required
-    description="ID of the training day to be edited"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="name"
-    type="string"
-    description="New name of the training day"
-  />
-  {/* @ts-ignore */}
-  <prop name="focus" type="string" description="New training focus" />
-  {/* @ts-ignore */}
-  <prop
-    name="exercises"
-    type="array"
-    description="New list of exercises"
-  >
-    {/* @ts-ignore */}
-    <array>
-      {/* @ts-ignore */}
-      <dict>
+      <Tool
+        name="create_training_day"
+        description="Creates a new training day in a specific week"
+        onCall={handleCreateDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID of the week to which the day should be added"
+        />
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           required
-          description="Name of the exercise"
+          description="Name of the training day"
         />
         {/* @ts-ignore */}
         <prop
-          name="repetitions"
-          type="number"
+          name="focus"
+          type="string"
           required
-          description="Number of repetitions"
+          description="Training focus (e.g. upper body, lower body, full body)"
         />
         {/* @ts-ignore */}
-        <prop name="weight" type="number" description="Weight in kg" />
-        {/* @ts-ignore */}
-      </dict>
-      {/* @ts-ignore */}
-    </array>
-    {/* @ts-ignore */}
-  </prop>
-</Tool>
+        <prop name="exercises" type="array" description="List of exercises">
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name of the exercise"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="repetitions"
+                type="number"
+                required
+                description="Number of repetitions"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="weight"
+                type="number"
+                description="Weight in kg (default: 0)"
+              />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
 
-<Tool
-  name="delete_training_day"
-  description="Deletes a training day"
-  onCall={handleDeleteDay}
->
-  {/* @ts-ignore */}
-  <prop
-    name="dayId"
-    type="string"
-    required
-    description="ID of the training day to be deleted"
-  />
-</Tool>
+      <Tool
+        name="edit_training_day"
+        description="Edits an existing training day"
+        onCall={handleEditDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID of the training day to be edited"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          description="New name of the training day"
+        />
+        {/* @ts-ignore */}
+        <prop name="focus" type="string" description="New training focus" />
+        {/* @ts-ignore */}
+        <prop name="exercises" type="array" description="New list of exercises">
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name of the exercise"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="repetitions"
+                type="number"
+                required
+                description="Number of repetitions"
+              />
+              {/* @ts-ignore */}
+              <prop name="weight" type="number" description="Weight in kg" />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
+
+      <Tool
+        name="delete_training_day"
+        description="Deletes a training day"
+        onCall={handleDeleteDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID of the training day to be deleted"
+        />
+      </Tool>
 
       <Tool
         name="delete_training_week"
@@ -1083,19 +1078,19 @@ const Trainingsplan = () => {
         />
       </Tool>
 
-<Tool
-  name="start_workout"
-  description="Starts a workout for a specific day"
-  onCall={handleStartWorkout}
->
-  {/* @ts-ignore */}
-  <prop
-    name="dayId"
-    type="string"
-    required
-    description="ID of the training day to start"
-  />
-</Tool>
+      <Tool
+        name="start_workout"
+        description="Starts a workout for a specific day"
+        onCall={handleStartWorkout}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID of the training day to start"
+        />
+      </Tool>
 
       <Container maxW="6xl">
         <Stack gap={4} textAlign="center" mb={12}>
@@ -1146,7 +1141,7 @@ const Trainingsplan = () => {
           >
             <Flex align="center" gap={2}>
               <FaPlus />
-              <Text>Neue Woche</Text>
+              <Text>New Week</Text>
             </Flex>
           </Button>
         </Flex>
@@ -1321,7 +1316,12 @@ const Trainingsplan = () => {
                                   flex="1"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    window.location.href = `/live-workout?dayId=${day.id}`;
+                                    // Store dayId in localStorage instead of URL parameter
+                                    localStorage.setItem(
+                                      "selectedDayId",
+                                      day.id
+                                    );
+                                    window.location.href = `/#/live-workout`;
                                   }}
                                 >
                                   <Flex align="center" gap={1}>
@@ -1813,7 +1813,7 @@ const Trainingsplan = () => {
                       >
                         <Flex align="center" gap={1}>
                           <FaPlus size="0.8rem" />
-                          <Text>Übung hinzufügen</Text>
+                          <Text>Add Exercise</Text>
                         </Flex>
                       </Button>
                     </Stack>
@@ -2030,7 +2030,7 @@ const Trainingsplan = () => {
                       >
                         <Flex align="center" gap={1}>
                           <FaPlus size="0.8rem" />
-                          <Text>Übung hinzufügen</Text>
+                          <Text>Add Exercise</Text>
                         </Flex>
                       </Button>
                     </Stack>
