@@ -12,11 +12,28 @@ import {
   Spinner,
   Flex,
 } from "@chakra-ui/react";
+import {
+  FaPlay,
+  FaPause,
+  FaStop,
+  FaCheck,
+  FaArrowLeft,
+  FaArrowRight,
+  FaRunning,
+  FaClipboardList,
+  FaSave,
+  FaTrophy,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaFire,
+  FaClock,
+  FaChartBar,
+} from "react-icons/fa";
 import { Tool } from "../components/Tool";
 import { apiService } from "../services/api";
 import type { WorkingDay, Exercise } from "../services/api";
 
-// Frontend Types für Kompatibilität mit der UI
+// Frontend Types for UI compatibility
 interface FrontendExercise {
   id?: number;
   name: string;
@@ -70,14 +87,8 @@ const LiveWorkout = () => {
   const [tempWeight, setTempWeight] = useState(0);
   const [tempReps, setTempReps] = useState(0);
 
-  // Exercise Management State
-  const [isManageExercisesOpen, setIsManageExercisesOpen] = useState(false);
+  // Exercise Management State (for VOIX only)
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
-  const [isAddingExercise, setIsAddingExercise] = useState(false);
-  const [newExerciseTitle, setNewExerciseTitle] = useState("");
-  const [newExerciseDescription, setNewExerciseDescription] = useState("");
-  const [newExerciseWeight, setNewExerciseWeight] = useState(0);
-  const [newExerciseReps, setNewExerciseReps] = useState(10);
 
   // Helper functions
   const convertBackendToFrontend = (
@@ -98,39 +109,38 @@ const LiveWorkout = () => {
       setAllExercises(exercises);
     } catch (err) {
       console.error("Error loading exercises:", err);
-      setError("Fehler beim Laden der Übungen");
+      setError("Error loading exercises");
     }
   };
 
-  const createNewExercise = async () => {
-    if (!newExerciseTitle.trim()) {
-      setError("Übungsname ist erforderlich");
+  const createNewExercise = async (
+    title: string,
+    description?: string,
+    weight?: number,
+    reps?: number
+  ) => {
+    if (!title.trim()) {
+      setError("Exercise name is required");
       return;
     }
 
     try {
       setIsLoading(true);
       const newExercise = await apiService.createExercise({
-        title: newExerciseTitle,
-        description: newExerciseDescription || undefined,
-        first_set_weight: newExerciseWeight,
-        first_set_reps: newExerciseReps,
+        title: title,
+        description: description || undefined,
+        first_set_weight: weight || 0,
+        first_set_reps: reps || 10,
       });
 
       // Update all exercises list
       await loadAllExercises();
 
-      // Reset form
-      setNewExerciseTitle("");
-      setNewExerciseDescription("");
-      setNewExerciseWeight(0);
-      setNewExerciseReps(10);
-      setIsAddingExercise(false);
-
-      alert(`Neue Übung "${newExercise.title}" wurde erstellt!`);
+      alert(`New exercise "${newExercise.title}" has been created!`);
+      return newExercise;
     } catch (err) {
       console.error("Error creating exercise:", err);
-      setError("Fehler beim Erstellen der Übung");
+      setError("Error creating exercise");
     } finally {
       setIsLoading(false);
     }
@@ -138,27 +148,33 @@ const LiveWorkout = () => {
 
   const addExerciseToWorkingDay = async (exerciseId: number) => {
     if (!workingDay?.id) {
-      setError("Kein Training geladen");
+      setError("No workout loaded");
       return;
     }
 
     try {
       setIsLoading(true);
-      const updatedDay = await apiService.addExercisesToDay(workingDay.id, [exerciseId]);
-      
+      const updatedDay = await apiService.addExercisesToDay(workingDay.id, [
+        exerciseId,
+      ]);
+
       // Update working day and exercises
       setWorkingDay(updatedDay);
       const frontendExercises = convertBackendToFrontend(updatedDay.exercises);
       setExercises(frontendExercises);
-      
+
       // Update all exercises list to reflect any changes
       await loadAllExercises();
 
-      const addedExercise = allExercises.find(ex => ex.id === exerciseId);
-      alert(`Übung "${addedExercise?.title || 'Unbekannt'}" wurde zum Training hinzugefügt!`);
+      const addedExercise = allExercises.find((ex) => ex.id === exerciseId);
+      alert(
+        `Exercise "${
+          addedExercise?.title || "Unknown"
+        }" has been added to the workout!`
+      );
     } catch (err) {
       console.error("Error adding exercise to day:", err);
-      setError("Fehler beim Hinzufügen der Übung");
+      setError("Error adding exercise");
     } finally {
       setIsLoading(false);
     }
@@ -166,28 +182,35 @@ const LiveWorkout = () => {
 
   const removeExerciseFromWorkingDay = async (exerciseId: number) => {
     if (!workingDay?.id) {
-      setError("Kein Training geladen");
+      setError("No workout loaded");
       return;
     }
 
-    const exerciseToRemove = exercises.find(ex => ex.id === exerciseId);
+    const exerciseToRemove = exercises.find((ex) => ex.id === exerciseId);
     const confirmRemove = window.confirm(
-      `Möchten Sie die Übung "${exerciseToRemove?.name || 'Unbekannt'}" aus dem Training entfernen?`
+      `Do you want to remove the exercise "${
+        exerciseToRemove?.name || "Unknown"
+      }" from the workout?`
     );
 
     if (!confirmRemove) return;
 
     try {
       setIsLoading(true);
-      const updatedDay = await apiService.removeExercisesFromDay(workingDay.id, [exerciseId]);
-      
+      const updatedDay = await apiService.removeExercisesFromDay(
+        workingDay.id,
+        [exerciseId]
+      );
+
       // Update working day and exercises
       setWorkingDay(updatedDay);
       const frontendExercises = convertBackendToFrontend(updatedDay.exercises);
       setExercises(frontendExercises);
 
       // If we removed the current exercise, adjust currentExercise index
-      const removedExerciseIndex = exercises.findIndex(ex => ex.id === exerciseId);
+      const removedExerciseIndex = exercises.findIndex(
+        (ex) => ex.id === exerciseId
+      );
       if (removedExerciseIndex === currentExercise && currentExercise > 0) {
         setCurrentExercise(currentExercise - 1);
       } else if (removedExerciseIndex < currentExercise) {
@@ -204,46 +227,59 @@ const LiveWorkout = () => {
       newCompleted.delete(removedExerciseIndex);
       setCompletedExercises(newCompleted);
 
-      alert(`Übung "${exerciseToRemove?.name || 'Unbekannt'}" wurde entfernt!`);
+      alert(
+        `Exercise "${exerciseToRemove?.name || "Unknown"}" has been removed!`
+      );
     } catch (err) {
       console.error("Error removing exercise from day:", err);
-      setError("Fehler beim Entfernen der Übung");
+      setError("Error removing exercise");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const replaceExerciseInWorkingDay = async (oldExerciseId: number, newExerciseId: number) => {
+  const replaceExerciseInWorkingDay = async (
+    oldExerciseId: number,
+    newExerciseId: number
+  ) => {
     if (!workingDay?.id) {
-      setError("Kein Training geladen");
+      setError("No workout loaded");
       return;
     }
 
-    const oldExercise = exercises.find(ex => ex.id === oldExerciseId);
-    const newExercise = allExercises.find(ex => ex.id === newExerciseId);
-    
+    const oldExercise = exercises.find((ex) => ex.id === oldExerciseId);
+    const newExercise = allExercises.find((ex) => ex.id === newExerciseId);
+
     const confirmReplace = window.confirm(
-      `Möchten Sie "${oldExercise?.name || 'Übung'}" durch "${newExercise?.title || 'neue Übung'}" ersetzen?`
+      `Do you want to replace "${oldExercise?.name || "Exercise"}" with "${
+        newExercise?.title || "new exercise"
+      }"?`
     );
 
     if (!confirmReplace) return;
 
     try {
       setIsLoading(true);
-      
+
       // Remove old exercise and add new one
       await apiService.removeExercisesFromDay(workingDay.id, [oldExerciseId]);
-      const updatedDay = await apiService.addExercisesToDay(workingDay.id, [newExerciseId]);
-      
+      const updatedDay = await apiService.addExercisesToDay(workingDay.id, [
+        newExerciseId,
+      ]);
+
       // Update working day and exercises
       setWorkingDay(updatedDay);
       const frontendExercises = convertBackendToFrontend(updatedDay.exercises);
       setExercises(frontendExercises);
 
-      alert(`Übung "${oldExercise?.name || 'Übung'}" wurde durch "${newExercise?.title || 'neue Übung'}" ersetzt!`);
+      alert(
+        `Exercise "${
+          oldExercise?.name || "Exercise"
+        }" has been replaced with "${newExercise?.title || "new exercise"}"!`
+      );
     } catch (err) {
       console.error("Error replacing exercise:", err);
-      setError("Fehler beim Ersetzen der Übung");
+      setError("Error replacing exercise");
     } finally {
       setIsLoading(false);
     }
@@ -266,7 +302,7 @@ const LiveWorkout = () => {
   const handleLoadTraining = async () => {
     if (isWorkoutActive) {
       const confirmAction = window.confirm(
-        "Ein Workout ist gerade aktiv! Möchten Sie das Workout beenden und ein neues Training laden?\n\nKlicken Sie 'OK', um das Workout zu beenden und ein neues Training zu laden, oder 'Abbrechen', um mit dem aktuellen Workout fortzufahren."
+        "A workout is currently active! Do you want to end the workout and load a new training?\n\nClick 'OK' to end the workout and load a new training, or 'Cancel' to continue with the current workout."
       );
       if (!confirmAction) {
         return; // User cancelled, stay with current workout
@@ -276,7 +312,7 @@ const LiveWorkout = () => {
     }
 
     // Now load new training
-    const dayId = prompt("Trainingstag-ID aus der Datenbank eingeben:");
+    const dayId = prompt("Enter training day ID from database:");
     if (dayId) {
       loadWorkingDay(parseInt(dayId));
     }
@@ -307,9 +343,7 @@ const LiveWorkout = () => {
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Fehler beim Laden des Trainingstags"
+        err instanceof Error ? err.message : "Error loading training day"
       );
       console.error("Error loading working day:", err);
     } finally {
@@ -375,7 +409,7 @@ const LiveWorkout = () => {
       return true;
     } catch (err) {
       console.error("Error saving workout results:", err);
-      setError("Fehler beim Speichern der Trainingsergebnisse");
+      setError("Error saving workout results");
       return false;
     } finally {
       setIsLoading(false);
@@ -385,13 +419,13 @@ const LiveWorkout = () => {
   // Complete workout function for the dedicated button
   const completeWorkout = async () => {
     if (Object.keys(exerciseSets).length === 0) {
-      setError("Keine Sätze aufgezeichnet. Führe mindestens einen Satz aus.");
+      setError("No sets recorded. Complete at least one set.");
       return;
     }
 
     if (!workingDay) {
       setError(
-        "Kein Training aus der Datenbank geladen. Laden Sie zuerst ein Training, um die Ergebnisse zu speichern."
+        "No training loaded from database. Load a training first to save results."
       );
       return;
     }
@@ -413,7 +447,7 @@ const LiveWorkout = () => {
       const exerciseCount = Object.keys(exerciseSets).length;
 
       alert(
-        `Workout erfolgreich gespeichert! 🎉\n\n📊 Zusammenfassung:\n• ${totalSets} Sets aufgezeichnet\n• ${exerciseCount} Übungen trainiert\n• Training: ${workingDay.title}`
+        `Workout successfully saved! 🎉\n\n📊 Summary:\n• ${totalSets} sets recorded\n• ${exerciseCount} exercises trained\n• Training: ${workingDay.title}`
       );
 
       // Clear sets after successful save
@@ -483,9 +517,7 @@ const LiveWorkout = () => {
       setCurrentExercise(nextIdx);
     } else {
       // All exercises completed - show completion message
-      alert(
-        "Alle Übungen abgeschlossen! 🎉 Vergiss nicht, dein Workout zu speichern!"
-      );
+      alert("All exercises completed! 🎉 Don't forget to save your workout!");
       // Don't auto-save here, let user decide with the button
     }
   };
@@ -773,30 +805,31 @@ const LiveWorkout = () => {
   };
 
   // Exercise Management VOIX Handlers
-  const handleCreateExercise = (event: Event) => {
+  const handleCreateExercise = async (event: Event) => {
     const details = (event as CustomEvent).detail;
     const { title, description, weight, reps } = details;
     console.log("VOIX: Creating new exercise", title);
-    
-    setNewExerciseTitle(title || "");
-    setNewExerciseDescription(description || "");
-    setNewExerciseWeight(weight || 0);
-    setNewExerciseReps(reps || 10);
-    setIsAddingExercise(true);
-    setIsManageExercisesOpen(true);
+
+    if (!title) {
+      setError("Exercise name is required for VOIX command");
+      return;
+    }
+
+    await createNewExercise(title, description, weight, reps);
   };
 
   const handleAddExerciseToDay = (event: Event) => {
     const details = (event as CustomEvent).detail;
     const { exerciseName } = details;
     console.log("VOIX: Adding exercise to day", exerciseName);
-    
+
     // Finde die Übung in allExercises
-    const exercise = allExercises.find(ex => 
-      ex.title.toLowerCase().includes(exerciseName.toLowerCase()) ||
-      exerciseName.toLowerCase().includes(ex.title.toLowerCase())
+    const exercise = allExercises.find(
+      (ex) =>
+        ex.title.toLowerCase().includes(exerciseName.toLowerCase()) ||
+        exerciseName.toLowerCase().includes(ex.title.toLowerCase())
     );
-    
+
     if (exercise?.id) {
       addExerciseToWorkingDay(exercise.id);
     }
@@ -806,13 +839,14 @@ const LiveWorkout = () => {
     const details = (event as CustomEvent).detail;
     const { exerciseName } = details;
     console.log("VOIX: Removing exercise from day", exerciseName);
-    
+
     // Finde die Übung in den aktuellen Übungen
-    const exercise = exercises.find(ex => 
-      ex.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
-      exerciseName.toLowerCase().includes(ex.name.toLowerCase())
+    const exercise = exercises.find(
+      (ex) =>
+        ex.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
+        exerciseName.toLowerCase().includes(ex.name.toLowerCase())
     );
-    
+
     if (exercise?.id) {
       removeExerciseFromWorkingDay(exercise.id);
     }
@@ -821,20 +855,27 @@ const LiveWorkout = () => {
   const handleReplaceExercise = (event: Event) => {
     const details = (event as CustomEvent).detail;
     const { oldExerciseName, newExerciseName } = details;
-    console.log("VOIX: Replacing exercise", oldExerciseName, "with", newExerciseName);
-    
+    console.log(
+      "VOIX: Replacing exercise",
+      oldExerciseName,
+      "with",
+      newExerciseName
+    );
+
     // Finde die alte Übung
-    const oldExercise = exercises.find(ex => 
-      ex.name.toLowerCase().includes(oldExerciseName.toLowerCase()) ||
-      oldExerciseName.toLowerCase().includes(ex.name.toLowerCase())
+    const oldExercise = exercises.find(
+      (ex) =>
+        ex.name.toLowerCase().includes(oldExerciseName.toLowerCase()) ||
+        oldExerciseName.toLowerCase().includes(ex.name.toLowerCase())
     );
-    
+
     // Finde die neue Übung
-    const newExercise = allExercises.find(ex => 
-      ex.title.toLowerCase().includes(newExerciseName.toLowerCase()) ||
-      newExerciseName.toLowerCase().includes(ex.title.toLowerCase())
+    const newExercise = allExercises.find(
+      (ex) =>
+        ex.title.toLowerCase().includes(newExerciseName.toLowerCase()) ||
+        newExerciseName.toLowerCase().includes(ex.title.toLowerCase())
     );
-    
+
     if (oldExercise?.id && newExercise?.id) {
       replaceExerciseInWorkingDay(oldExercise.id, newExercise.id);
     }
@@ -845,19 +886,19 @@ const LiveWorkout = () => {
       {/* VOIX Context Elements */}
       {/* @ts-ignore */}
       <context name="workoutState">
-        Workout ist {isWorkoutActive ? "aktiv" : "inaktiv"}. Aktuelle Übung:{" "}
-        {currentExercise + 1} von {exercises.length} (
-        {exercises[currentExercise]?.name || "keine"}). Pause-Timer:{" "}
-        {pauseTimer > 0 ? `${pauseTimer} Sekunden` : "nicht aktiv"}.
-        Abgeschlossene Übungen: {completedExercises.size} von {exercises.length}
-        .{/* @ts-ignore */}
+        Workout is {isWorkoutActive ? "active" : "inactive"}. Current exercise:{" "}
+        {currentExercise + 1} of {exercises.length} (
+        {exercises[currentExercise]?.name || "none"}). Pause timer:{" "}
+        {pauseTimer > 0 ? `${pauseTimer} seconds` : "not active"}. Completed
+        exercises: {completedExercises.size} of {exercises.length}.
+        {/* @ts-ignore */}
       </context>
 
       {/* @ts-ignore */}
       <context name="currentExercise">
         {exercises[currentExercise]
           ? JSON.stringify(exercises[currentExercise])
-          : "Keine aktuelle Übung"}
+          : "No current exercise"}
         {/* @ts-ignore */}
       </context>
 
@@ -876,42 +917,51 @@ const LiveWorkout = () => {
       {/* @ts-ignore */}
       <context name="workingDay">
         {workingDay
-          ? `Training aus der Datenbank geladen: ${workingDay.title} (ID: ${workingDay.id})`
-          : "Kein Training aus der Datenbank geladen (Mock-Übungen werden verwendet)"}
+          ? `Training loaded from database: ${workingDay.title} (ID: ${workingDay.id})`
+          : "No training loaded from database (using mock exercises)"}
         {/* @ts-ignore */}
       </context>
 
       {/* @ts-ignore */}
       <context name="currentExerciseSets">
-        Aktuelle Übung ({currentExercise}):{" "}
-        {exercises[currentExercise]?.name || "keine"}. Abgeschlossene Sets:{" "}
-        {exerciseSets[currentExercise]?.length || 0}. Sets Details:{" "}
+        Current exercise ({currentExercise}):{" "}
+        {exercises[currentExercise]?.name || "none"}. Completed sets:{" "}
+        {exerciseSets[currentExercise]?.length || 0}. Sets details:{" "}
         {exerciseSets[currentExercise]
           ? JSON.stringify(exerciseSets[currentExercise])
-          : "keine Sets"}
+          : "no sets"}
         {/* @ts-ignore */}
       </context>
 
       {/* @ts-ignore */}
       <context name="exerciseManagement">
-        Exercise Management ist verfügbar: {workingDay ? "Ja" : "Nein"}. 
-        Verfügbare Übungen zum Hinzufügen: {allExercises.filter(ex => !exercises.some(currentEx => currentEx.id === ex.id)).length}.
-        Aktuelle Übungen im Training: {exercises.length}.
-        Management Panel geöffnet: {isManageExercisesOpen ? "Ja" : "Nein"}.
-        Alle verfügbaren Übungen: {JSON.stringify(allExercises.map(ex => ({id: ex.id, title: ex.title})))}.
+        Exercise Management is available: {workingDay ? "Yes" : "No"}. Available
+        exercises to add:{" "}
+        {
+          allExercises.filter(
+            (ex) => !exercises.some((currentEx) => currentEx.id === ex.id)
+          ).length
+        }
+        . Current exercises in training: {exercises.length}. All available
+        exercises:{" "}
+        {JSON.stringify(
+          allExercises.map((ex) => ({ id: ex.id, title: ex.title }))
+        )}
+        . VOIX can create, add, remove, and replace exercises without UI
+        interaction.
         {/* @ts-ignore */}
       </context>
 
       {/* VOIX Tool Elements */}
       <Tool
         name="start_workout"
-        description="Startet das Workout"
+        description="Starts the workout"
         onCall={handleStartWorkout}
       />
 
       <Tool
         name="load_working_day"
-        description="Lädt einen Trainingstag aus der Datenbank"
+        description="Loads a training day from the database"
         onCall={handleLoadWorkingDay}
       >
         {/* @ts-ignore */}
@@ -919,38 +969,38 @@ const LiveWorkout = () => {
           name="dayId"
           type="number"
           required
-          description="ID des Trainingstags aus der Datenbank"
+          description="ID of the training day from the database"
         />
       </Tool>
 
       <Tool
         name="pause_workout"
-        description="Pausiert das Workout für eine bestimmte Zeit"
+        description="Pauses the workout for a specific time"
         onCall={handlePauseWorkout}
       >
         {/* @ts-ignore */}
         <prop
           name="pauseTime"
           type="number"
-          description="Pause-Zeit in Sekunden (Standard: 30)"
+          description="Pause time in seconds (default: 30)"
         />
       </Tool>
 
       <Tool
         name="stop_workout"
-        description="Stoppt das Workout komplett und speichert die Ergebnisse in der Datenbank"
+        description="Stops the workout completely and saves results to database"
         onCall={handleStopWorkout}
       />
 
       <Tool
         name="complete_set"
-        description="Markiert den aktuellen Satz als abgeschlossen"
+        description="Marks the current set as completed"
         onCall={handleCompleteSet}
       />
 
       <Tool
         name="complete_multiple_sets"
-        description="Markiert mehrere Sätze der aktuellen Übung als abgeschlossen"
+        description="Marks multiple sets of the current exercise as completed"
         onCall={handleCompleteMultipleSets}
       >
         {/* @ts-ignore */}
@@ -958,25 +1008,25 @@ const LiveWorkout = () => {
           name="count"
           type="number"
           required
-          description="Anzahl der Sets die als abgeschlossen markiert werden sollen"
+          description="Number of sets to mark as completed"
         />
       </Tool>
 
       <Tool
         name="next_exercise"
-        description="Wechselt zur nächsten Übung"
+        description="Switches to the next exercise"
         onCall={handleNextExercise}
       />
 
       <Tool
         name="previous_exercise"
-        description="Wechselt zur vorherigen Übung"
+        description="Switches to the previous exercise"
         onCall={handlePreviousExercise}
       />
 
       <Tool
         name="update_exercise"
-        description="Aktualisiert Gewicht und Wiederholungen einer Übung"
+        description="Updates weight and repetitions of an exercise"
         onCall={handleUpdateExercise}
       >
         {/* @ts-ignore */}
@@ -984,21 +1034,21 @@ const LiveWorkout = () => {
           name="exerciseIndex"
           type="number"
           required
-          description="Index der zu aktualisierenden Übung (0-basiert)"
+          description="Index of the exercise to update (0-based)"
         />
         {/* @ts-ignore */}
-        <prop name="weight" type="number" description="Neues Gewicht in kg" />
+        <prop name="weight" type="number" description="New weight in kg" />
         {/* @ts-ignore */}
         <prop
           name="reps"
           type="number"
-          description="Neue Anzahl Wiederholungen"
+          description="New number of repetitions"
         />
       </Tool>
 
       <Tool
         name="jump_to_exercise"
-        description="Springt direkt zu einer bestimmten Übung"
+        description="Jumps directly to a specific exercise"
         onCall={handleJumpToExercise}
       >
         {/* @ts-ignore */}
@@ -1006,13 +1056,13 @@ const LiveWorkout = () => {
           name="exerciseIndex"
           type="number"
           required
-          description="Index der Übung zu der gesprungen werden soll (0-basiert)"
+          description="Index of the exercise to jump to (0-based)"
         />
       </Tool>
 
       <Tool
         name="edit_set"
-        description="Bearbeitet einen bestehenden Satz einer Übung"
+        description="Edits an existing set of an exercise"
         onCall={handleEditSet}
       >
         {/* @ts-ignore */}
@@ -1262,24 +1312,32 @@ const LiveWorkout = () => {
         {/* Workout Header */}
         <Stack gap={4} textAlign="center" mb={12}>
           <Heading size="2xl" color="text.primary">
-            🏃‍♂️ Live Workout
+            <Flex align="center" justify="center" gap={3}>
+              <FaRunning />
+              Live Workout
+            </Flex>
           </Heading>
           <Text fontSize="lg" color="text.secondary">
             {workingDay
               ? `Training: ${workingDay.title}`
-              : "Folge dem Timer und gib dein Bestes!"}
+              : "Follow the timer and give your best!"}
           </Text>
 
           {/* Database status */}
           {workingDay ? (
             <Text fontSize="sm" color="green.600">
-              ✅ Training aus der Datenbank geladen (Ergebnisse werden
-              gespeichert)
+              <Flex align="center" justify="center" gap={2}>
+                <FaCheckCircle />
+                Training loaded from database (results will be saved)
+              </Flex>
             </Text>
           ) : (
             <Flex justify="center" gap={4} align="center">
               <Text fontSize="sm" color="orange.600">
-                ⚠️ Mock-Training (nicht aus der Datenbank)
+                <Flex align="center" gap={2}>
+                  <FaExclamationTriangle />
+                  Mock training (not from database)
+                </Flex>
               </Text>
               <Button
                 size="sm"
@@ -1288,7 +1346,10 @@ const LiveWorkout = () => {
                 _hover={{ bg: "accent.secondary" }}
                 onClick={handleLoadTraining}
               >
-                📋 Training aus Datenbank laden
+                <Flex align="center" gap={2}>
+                  <FaClipboardList />
+                  Load Training from Database
+                </Flex>
               </Button>
             </Flex>
           )}
@@ -1330,7 +1391,7 @@ const LiveWorkout = () => {
                 <Stack gap={6}>
                   <Stack gap={2}>
                     <Heading size="xl" color="text.primary">
-                      {exercises[currentExercise]?.name || "Bereit?"}
+                      {exercises[currentExercise]?.name || "Ready?"}
                     </Heading>
                   </Stack>
 
@@ -1346,7 +1407,7 @@ const LiveWorkout = () => {
                         >
                           <Box>
                             <Text fontSize="sm" color="text.secondary" mb={1}>
-                              Gewicht (kg)
+                              Weight (kg)
                             </Text>
                             {editingExercise === currentExercise ? (
                               <Input
@@ -1400,7 +1461,7 @@ const LiveWorkout = () => {
                           </Box>
                           <Box>
                             <Text fontSize="sm" color="text.secondary" mb={1}>
-                              Wiederholungen
+                              Repetitions
                             </Text>
                             {editingExercise === currentExercise ? (
                               <Input
@@ -1457,7 +1518,7 @@ const LiveWorkout = () => {
                       {/* Completed Sets Display */}
                       <Box>
                         <Text fontSize="sm" color="text.secondary" mb={2}>
-                          Sets absolviert:{" "}
+                          Sets completed:{" "}
                           {exerciseSets[currentExercise]?.length || 0}
                         </Text>
 
@@ -1562,7 +1623,10 @@ const LiveWorkout = () => {
                         fontWeight="bold"
                         onClick={startWorkout}
                       >
-                        ▶️ Workout starten
+                        <Flex align="center" gap={2}>
+                          <FaPlay />
+                          Start Workout
+                        </Flex>
                       </Button>
                     ) : (
                       <>
@@ -1574,7 +1638,10 @@ const LiveWorkout = () => {
                           px={6}
                           onClick={completeSet}
                         >
-                          ✅ Set abgeschlossen
+                          <Flex align="center" gap={2}>
+                            <FaCheck />
+                            Set Completed
+                          </Flex>
                         </Button>
                         <Button
                           size="lg"
@@ -1585,7 +1652,10 @@ const LiveWorkout = () => {
                           onClick={previousExercise}
                           disabled={currentExercise === 0}
                         >
-                          ⬅️ Zurück
+                          <Flex align="center" gap={2}>
+                            <FaArrowLeft />
+                            Back
+                          </Flex>
                         </Button>
                         <Button
                           size="lg"
@@ -1595,7 +1665,10 @@ const LiveWorkout = () => {
                           px={6}
                           onClick={nextExercise}
                         >
-                          ➡️ Nächste Übung
+                          <Flex align="center" gap={2}>
+                            <FaArrowRight />
+                            Next Exercise
+                          </Flex>
                         </Button>
                         <Button
                           size="lg"
@@ -1605,7 +1678,7 @@ const LiveWorkout = () => {
                           px={6}
                           onClick={() => {
                             const pauseTime = prompt(
-                              "Pause-Zeit in Sekunden:",
+                              "Pause time in seconds:",
                               "30"
                             );
                             if (pauseTime) {
@@ -1613,7 +1686,10 @@ const LiveWorkout = () => {
                             }
                           }}
                         >
-                          ⏸️ Pause
+                          <Flex align="center" gap={2}>
+                            <FaPause />
+                            Pause
+                          </Flex>
                         </Button>
                         <Button
                           size="lg"
@@ -1623,7 +1699,10 @@ const LiveWorkout = () => {
                           px={6}
                           onClick={stopWorkout}
                         >
-                          ⏹️ Stop
+                          <Flex align="center" gap={2}>
+                            <FaStop />
+                            Stop
+                          </Flex>
                         </Button>
                       </>
                     )}
@@ -1643,14 +1722,17 @@ const LiveWorkout = () => {
                 >
                   <Stack gap={4} textAlign="center">
                     <Heading size="md" color="text.primary">
-                      🏁 Workout beenden
+                      <Flex align="center" justify="center" gap={2}>
+                        <FaTrophy />
+                        Finish Workout
+                      </Flex>
                     </Heading>
                     <Text color="text.secondary" fontSize="sm">
-                      Speichere dein Workout in der Datenbank mit allen Sets,
-                      Gewichten und Wiederholungen
+                      Save your workout to the database with all sets, weights
+                      and repetitions
                     </Text>
                     <Text color="text.secondary" fontSize="xs">
-                      Bisher aufgezeichnet:{" "}
+                      Recorded so far:{" "}
                       {Object.values(exerciseSets).reduce(
                         (total, sets) => total + sets.length,
                         0
@@ -1669,9 +1751,19 @@ const LiveWorkout = () => {
                       onClick={completeWorkout}
                       loading={isLoading}
                     >
-                      {isLoading
-                        ? "Speichere..."
-                        : "🎉 Workout abschließen & speichern"}
+                      <Flex align="center" justify="center" gap={2}>
+                        {isLoading ? (
+                          <>
+                            <Spinner size="sm" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <FaTrophy />
+                            Complete & Save Workout
+                          </>
+                        )}
+                      </Flex>
                     </Button>
                     {error && (
                       <Text color="red.500" fontSize="sm" mt={2}>
@@ -1696,19 +1788,22 @@ const LiveWorkout = () => {
                   >
                     <Stack gap={4} textAlign="center">
                       <Heading size="md" color="text.primary">
-                        💾 Workout speichern
+                        <Flex align="center" justify="center" gap={2}>
+                          <FaSave />
+                          Save Workout
+                        </Flex>
                       </Heading>
                       <Text color="text.secondary" fontSize="sm">
-                        Du hast aufgezeichnete Sets. Möchtest du diese in der
-                        Datenbank speichern?
+                        You have recorded sets. Do you want to save them to the
+                        database?
                       </Text>
                       <Text color="text.secondary" fontSize="xs">
-                        Aufgezeichnet:{" "}
+                        Recorded:{" "}
                         {Object.values(exerciseSets).reduce(
                           (total, sets) => total + sets.length,
                           0
                         )}{" "}
-                        Sets aus {Object.keys(exerciseSets).length} Übungen
+                        Sets from {Object.keys(exerciseSets).length} exercises
                       </Text>
                       <Button
                         size="lg"
@@ -1722,7 +1817,19 @@ const LiveWorkout = () => {
                         onClick={completeWorkout}
                         loading={isLoading}
                       >
-                        {isLoading ? "Speichere..." : "💾 Jetzt speichern"}
+                        <Flex align="center" justify="center" gap={2}>
+                          {isLoading ? (
+                            <>
+                              <Spinner size="sm" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <FaSave />
+                              Save Now
+                            </>
+                          )}
+                        </Flex>
                       </Button>
                       {error && (
                         <Text color="red.500" fontSize="sm" mt={2}>
@@ -1744,7 +1851,7 @@ const LiveWorkout = () => {
               >
                 <Stack gap={4}>
                   <Heading size="md" color="text.primary">
-                    Workout Fortschritt (Übungen)
+                    Workout Progress (Exercises)
                   </Heading>
                   <Progress.Root
                     value={workoutProgressPercentage}
@@ -1756,7 +1863,7 @@ const LiveWorkout = () => {
                     </Progress.Track>
                   </Progress.Root>
                   <Text color="text.secondary" textAlign="center">
-                    Abgeschlossene Übungen: {completedExercises.size} /{" "}
+                    Completed exercises: {completedExercises.size} /{" "}
                     {exercises.length}
                   </Text>
                 </Stack>
@@ -1774,7 +1881,7 @@ const LiveWorkout = () => {
                 rounded="lg"
               >
                 <Heading size="md" color="text.primary" mb={4}>
-                  Heutige Übungen
+                  Today's Exercises
                 </Heading>
                 <Stack gap={3}>
                   {exercises.map((exercise, index) => {
@@ -1816,8 +1923,8 @@ const LiveWorkout = () => {
                             >
                               {exercise.weight > 0
                                 ? `${exercise.weight}kg`
-                                : "Körpergewicht"}{" "}
-                              • {exercise.repetitions} Wdh.
+                                : "Bodyweight"}{" "}
+                              • {exercise.repetitions} reps
                             </Text>
                             <Text
                               color={isActive ? "white" : "text.secondary"}
@@ -1826,9 +1933,15 @@ const LiveWorkout = () => {
                               Sets: {exerciseSets[index]?.length || 0}
                             </Text>
                           </Stack>
-                          <Text fontSize="lg">
-                            {isCompleted ? "✅" : isActive ? "🔥" : "⏳"}
-                          </Text>
+                          <Box color={isActive ? "white" : "text.secondary"}>
+                            {isCompleted ? (
+                              <FaCheck />
+                            ) : isActive ? (
+                              <FaFire />
+                            ) : (
+                              <FaClock />
+                            )}
+                          </Box>
                         </Stack>
                       </Box>
                     );
@@ -1847,16 +1960,19 @@ const LiveWorkout = () => {
                 >
                   <Stack gap={2}>
                     <Text fontSize="sm" fontWeight="bold" color="green.700">
-                      📊 Datenbank-Training
+                      <Flex align="center" gap={2}>
+                        <FaChartBar />
+                        Database Training
+                      </Flex>
                     </Text>
                     <Text fontSize="xs" color="text.secondary">
-                      Plan-ID: {workingDay.plan_id}
+                      Plan ID: {workingDay.plan_id}
                     </Text>
                     <Text fontSize="xs" color="text.secondary">
-                      Tag-ID: {workingDay.id}
+                      Day ID: {workingDay.id}
                     </Text>
                     <Text fontSize="xs" color="text.secondary">
-                      Übungen: {workingDay.exercises.length}
+                      Exercises: {workingDay.exercises.length}
                     </Text>
                   </Stack>
                 </Box>
@@ -1901,7 +2017,7 @@ const LiveWorkout = () => {
                   {formatTime(pauseTimer)}
                 </Text>
                 <Text color="text.secondary">
-                  Das Workout wird automatisch fortgesetzt
+                  The workout will continue automatically
                 </Text>
                 <Button
                   bg="accent.primary"
@@ -1912,261 +2028,13 @@ const LiveWorkout = () => {
                     setIsWorkoutActive(true);
                   }}
                 >
-                  Pause beenden
+                  <Flex align="center" gap={2}>
+                    <FaPlay />
+                    End Pause
+                  </Flex>
                 </Button>
               </Stack>
             </Box>
-
-            {/* Exercise Management Section */}
-            {workingDay && (
-              <Box
-                p={6}
-                bg="bg.secondary"
-                borderColor="blue.200"
-                borderWidth="2px"
-                rounded="lg"
-                mb={6}
-              >
-                <Stack gap={4}>
-                  <Flex justify="space-between" align="center">
-                    <Heading size="md" color="text.primary">
-                      🔧 Übungen verwalten
-                    </Heading>
-                    <Button
-                      size="sm"
-                      bg="blue.500"
-                      color="white"
-                      _hover={{ bg: "blue.600" }}
-                      onClick={() => setIsManageExercisesOpen(!isManageExercisesOpen)}
-                    >
-                      {isManageExercisesOpen ? "Schließen" : "Verwalten"}
-                    </Button>
-                  </Flex>
-
-                  {isManageExercisesOpen && (
-                    <Stack gap={4}>
-                      {/* Add New Exercise Section */}
-                      <Box
-                        p={4}
-                        bg="bg.tertiary"
-                        borderColor="green.200"
-                        borderWidth="1px"
-                        rounded="md"
-                      >
-                        <Stack gap={3}>
-                          <Flex justify="space-between" align="center">
-                            <Text fontWeight="bold" color="text.primary">
-                              ➕ Neue Übung erstellen
-                            </Text>
-                            <Button
-                              size="sm"
-                              bg="green.500"
-                              color="white"
-                              _hover={{ bg: "green.600" }}
-                              onClick={() => setIsAddingExercise(!isAddingExercise)}
-                            >
-                              {isAddingExercise ? "Abbrechen" : "Hinzufügen"}
-                            </Button>
-                          </Flex>
-
-                          {isAddingExercise && (
-                            <Stack gap={3}>
-                              <Input
-                                placeholder="Übungsname (z.B. Liegestütze)"
-                                value={newExerciseTitle}
-                                onChange={(e) => setNewExerciseTitle(e.target.value)}
-                                bg="bg"
-                              />
-                              <Input
-                                placeholder="Beschreibung (optional)"
-                                value={newExerciseDescription}
-                                onChange={(e) => setNewExerciseDescription(e.target.value)}
-                                bg="bg"
-                              />
-                              <Flex gap={2}>
-                                <Box>
-                                  <Text fontSize="sm" color="text.secondary" mb={1}>
-                                    Gewicht (kg)
-                                  </Text>
-                                  <Input
-                                    type="number"
-                                    value={newExerciseWeight}
-                                    onChange={(e) => setNewExerciseWeight(Number(e.target.value))}
-                                    bg="bg"
-                                    w="100px"
-                                  />
-                                </Box>
-                                <Box>
-                                  <Text fontSize="sm" color="text.secondary" mb={1}>
-                                    Wiederholungen
-                                  </Text>
-                                  <Input
-                                    type="number"
-                                    value={newExerciseReps}
-                                    onChange={(e) => setNewExerciseReps(Number(e.target.value))}
-                                    bg="bg"
-                                    w="100px"
-                                  />
-                                </Box>
-                              </Flex>
-                              <Button
-                                bg="green.600"
-                                color="white"
-                                _hover={{ bg: "green.700" }}
-                                onClick={createNewExercise}
-                                loading={isLoading}
-                                disabled={!newExerciseTitle.trim()}
-                              >
-                                Übung erstellen
-                              </Button>
-                            </Stack>
-                          )}
-                        </Stack>
-                      </Box>
-
-                      {/* Available Exercises to Add */}
-                      <Box
-                        p={4}
-                        bg="bg.tertiary"
-                        borderColor="blue.200"
-                        borderWidth="1px"
-                        rounded="md"
-                      >
-                        <Text fontWeight="bold" color="text.primary" mb={3}>
-                          📋 Verfügbare Übungen hinzufügen
-                        </Text>
-                        <Grid templateColumns="repeat(auto-fill, minmax(250px, 1fr))" gap={3}>
-                          {allExercises
-                            .filter(exercise => !exercises.some(ex => ex.id === exercise.id))
-                            .map((exercise) => (
-                              <Box
-                                key={exercise.id}
-                                p={3}
-                                bg="bg"
-                                borderWidth="1px"
-                                borderColor="border"
-                                rounded="md"
-                              >
-                                <Stack gap={2}>
-                                  <Text fontSize="sm" fontWeight="bold" color="text.primary">
-                                    {exercise.title}
-                                  </Text>
-                                  <Text fontSize="xs" color="text.secondary">
-                                    {exercise.first_set_weight || 0}kg • {exercise.first_set_reps || 10} Wdh.
-                                  </Text>
-                                  <Button
-                                    size="sm"
-                                    bg="blue.500"
-                                    color="white"
-                                    _hover={{ bg: "blue.600" }}
-                                    onClick={() => addExerciseToWorkingDay(exercise.id!)}
-                                  >
-                                    ➕ Hinzufügen
-                                  </Button>
-                                </Stack>
-                              </Box>
-                            ))}
-                        </Grid>
-                        {allExercises.filter(exercise => !exercises.some(ex => ex.id === exercise.id)).length === 0 && (
-                          <Text color="text.secondary" fontSize="sm" textAlign="center">
-                            Alle verfügbaren Übungen sind bereits im Training enthalten.
-                          </Text>
-                        )}
-                      </Box>
-
-                      {/* Current Exercises Management */}
-                      <Box
-                        p={4}
-                        bg="bg.tertiary"
-                        borderColor="orange.200"
-                        borderWidth="1px"
-                        rounded="md"
-                      >
-                        <Text fontWeight="bold" color="text.primary" mb={3}>
-                          🔄 Aktuelle Übungen verwalten
-                        </Text>
-                        <Stack gap={3}>
-                          {exercises.map((exercise, index) => (
-                            <Box
-                              key={exercise.id || index}
-                              p={3}
-                              bg="bg"
-                              borderWidth="1px"
-                              borderColor={index === currentExercise ? "accent.primary" : "border"}
-                              rounded="md"
-                            >
-                              <Stack gap={2}>
-                                <Flex justify="space-between" align="center">
-                                  <Stack gap={1}>
-                                    <Text fontSize="sm" fontWeight="bold" color="text.primary">
-                                      {exercise.name}
-                                    </Text>
-                                    <Text fontSize="xs" color="text.secondary">
-                                      {exercise.weight}kg • {exercise.repetitions} Wdh. • Sets: {exerciseSets[index]?.length || 0}
-                                    </Text>
-                                  </Stack>
-                                  <Stack direction="row" gap={1}>
-                                    <Button
-                                      size="sm"
-                                      bg="orange.500"
-                                      color="white"
-                                      _hover={{ bg: "orange.600" }}
-                                      onClick={() => {
-                                        const availableExercises = allExercises.filter(ex => 
-                                          !exercises.some(currentEx => currentEx.id === ex.id)
-                                        );
-                                        
-                                        if (availableExercises.length === 0) {
-                                          alert("Keine verfügbaren Übungen zum Ersetzen.");
-                                          return;
-                                        }
-
-                                        const exerciseNames = availableExercises.map((ex, idx) => 
-                                          `${idx + 1}. ${ex.title}`
-                                        ).join('\n');
-                                        
-                                        const choice = prompt(
-                                          `Wählen Sie eine Übung zum Ersetzen:\n${exerciseNames}\n\nGeben Sie die Nummer ein:`
-                                        );
-                                        
-                                        if (choice) {
-                                          const choiceIndex = parseInt(choice) - 1;
-                                          if (choiceIndex >= 0 && choiceIndex < availableExercises.length) {
-                                            const newExercise = availableExercises[choiceIndex];
-                                            if (exercise.id && newExercise.id) {
-                                              replaceExerciseInWorkingDay(exercise.id, newExercise.id);
-                                            }
-                                          }
-                                        }
-                                      }}
-                                    >
-                                      🔄
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      bg="red.500"
-                                      color="white"
-                                      _hover={{ bg: "red.600" }}
-                                      onClick={() => {
-                                        if (exercise.id) {
-                                          removeExerciseFromWorkingDay(exercise.id);
-                                        }
-                                      }}
-                                    >
-                                      🗑️
-                                    </Button>
-                                  </Stack>
-                                </Flex>
-                              </Stack>
-                            </Box>
-                          ))}
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  )}
-                </Stack>
-              </Box>
-            )}
           </Box>
         )}
       </Container>
