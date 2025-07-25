@@ -28,10 +28,13 @@ import {
   FaFire,
   FaClock,
   FaChartBar,
+  FaTimes,
+  FaCalendarAlt,
+  FaDumbbell,
 } from "react-icons/fa";
 import { Tool } from "../components/Tool";
 import { apiService } from "../services/api";
-import type { WorkingDay, Exercise } from "../services/api";
+import type { WorkingDay, Exercise, WorkingPlan } from "../services/api";
 
 // Frontend Types for UI compatibility
 interface FrontendExercise {
@@ -73,6 +76,13 @@ const LiveWorkout = () => {
   const [workoutSession, setWorkoutSession] = useState<WorkoutSession>({
     exerciseResults: {},
   });
+
+  // Training selection modal state
+  const [isTrainingModalOpen, setIsTrainingModalOpen] = useState(false);
+  const [availablePlans, setAvailablePlans] = useState<WorkingPlan[]>([]);
+  const [availableDays, setAvailableDays] = useState<WorkingDay[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<WorkingPlan | null>(null);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
 
   // Mock exercises (fallback)
   const [exercises, setExercises] = useState<FrontendExercise[]>([
@@ -293,10 +303,35 @@ const LiveWorkout = () => {
     // Always load all exercises for exercise management
     loadAllExercises();
 
+    // Load available trainings for VOIX context
+    loadAvailableTrainings();
+
     if (dayId) {
       loadWorkingDay(parseInt(dayId));
     }
   }, []);
+
+  // Function to load all available training plans and days
+  const loadAvailableTrainings = async () => {
+    setIsLoadingPlans(true);
+    setError(null);
+
+    try {
+      // Load all plans and days in parallel
+      const [plans, days] = await Promise.all([
+        apiService.getWorkingPlans(),
+        apiService.getWorkingDays(),
+      ]);
+
+      setAvailablePlans(plans);
+      setAvailableDays(days);
+    } catch (err) {
+      console.error("Error loading trainings:", err);
+      setError("Failed to load available trainings");
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
 
   // Function to handle training loading with workout check
   const handleLoadTraining = async () => {
@@ -311,11 +346,16 @@ const LiveWorkout = () => {
       await stopWorkout();
     }
 
-    // Now load new training
-    const dayId = prompt("Enter training day ID from database:");
-    if (dayId) {
-      loadWorkingDay(parseInt(dayId));
-    }
+    // Load available trainings and open modal
+    await loadAvailableTrainings();
+    setIsTrainingModalOpen(true);
+  };
+
+  // Function to select and load a specific training day
+  const selectTrainingDay = async (dayId: number) => {
+    setIsTrainingModalOpen(false);
+    setSelectedPlan(null);
+    await loadWorkingDay(dayId);
   };
 
   const loadWorkingDay = async (dayId: number) => {
@@ -881,6 +921,159 @@ const LiveWorkout = () => {
     }
   };
 
+  // Training Selection VOIX Handlers
+  const handleLoadTrainingByName = async (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { planName, dayName, dayNumber } = details;
+    console.log("VOIX: Loading training by name", {
+      planName,
+      dayName,
+      dayNumber,
+    });
+
+    // Load available trainings first and get the fresh data
+    setIsLoadingPlans(true);
+    setError(null);
+
+    try {
+      const [plans, days] = await Promise.all([
+        apiService.getWorkingPlans(),
+        apiService.getWorkingDays(),
+      ]);
+
+      console.log("Loaded plans:", plans);
+      console.log("Loaded days:", days);
+
+      // Update state
+      setAvailablePlans(plans);
+      setAvailableDays(days);
+
+      let targetDay: WorkingDay | null = null;
+
+      if (planName && (dayName || dayNumber)) {
+        // Find specific day in specific plan
+        const plan = plans.find(
+          (p) =>
+            p.title.toLowerCase().includes(planName.toLowerCase()) ||
+            planName.toLowerCase().includes(p.title.toLowerCase())
+        );
+
+        console.log("Found plan:", plan);
+
+        if (plan) {
+          if (dayNumber) {
+            // Find by day number
+            targetDay =
+              days.find(
+                (day) => day.plan_id === plan.id && day.day_number === dayNumber
+              ) || null;
+          } else if (dayName) {
+            // Find by day name
+            targetDay =
+              days.find(
+                (day) =>
+                  day.plan_id === plan.id &&
+                  (day.title.toLowerCase().includes(dayName.toLowerCase()) ||
+                    dayName.toLowerCase().includes(day.title.toLowerCase()))
+              ) || null;
+          }
+        }
+      } else if (dayName && !planName) {
+        // Find day by name across all plans
+        targetDay =
+          days.find(
+            (day) =>
+              day.title.toLowerCase().includes(dayName.toLowerCase()) ||
+              dayName.toLowerCase().includes(day.title.toLowerCase())
+          ) || null;
+      }
+
+      console.log("Found target day:", targetDay);
+
+      if (targetDay?.id) {
+        console.log("VOIX: Found training day:", targetDay.title);
+        await selectTrainingDay(targetDay.id);
+      } else {
+        const errorMessage = `Training not found. Plan: "${
+          planName || "any"
+        }", Day: "${dayName || dayNumber || "any"}"`;
+        console.log("VOIX Error:", errorMessage);
+        setError(errorMessage);
+      }
+    } catch (err) {
+      console.error("Error loading trainings for VOIX:", err);
+      setError("Failed to load available trainings");
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
+
+  const handleOpenTrainingSelection = async (_event: Event) => {
+    console.log("VOIX: Opening training selection");
+    await handleLoadTraining();
+  };
+
+  const handleListAvailableTrainings = async (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { planName } = details;
+    console.log("VOIX: Listing available trainings", { planName });
+
+    try {
+      const [plans, days] = await Promise.all([
+        apiService.getWorkingPlans(),
+        apiService.getWorkingDays(),
+      ]);
+
+      setAvailablePlans(plans);
+      setAvailableDays(days);
+
+      if (planName) {
+        // List days in specific plan
+        const plan = plans.find(
+          (p) =>
+            p.title.toLowerCase().includes(planName.toLowerCase()) ||
+            planName.toLowerCase().includes(p.title.toLowerCase())
+        );
+
+        if (plan) {
+          const planDays = days.filter((day) => day.plan_id === plan.id);
+          const daysList = planDays
+            .map((day) => `Day ${day.day_number}: ${day.title}`)
+            .join(", ");
+          alert(
+            `Available days in "${plan.title}":\n${daysList || "No days found"}`
+          );
+        } else {
+          setError(`Plan "${planName}" not found`);
+        }
+      } else {
+        // List all plans
+        const plansList = plans
+          .map(
+            (plan) =>
+              `${plan.title} (${
+                days.filter((day) => day.plan_id === plan.id).length
+              } days)`
+          )
+          .join("\n");
+
+        const individualDays = days.filter((day) => !day.plan_id);
+        const individualDaysList = individualDays
+          .map((day) => day.title)
+          .join("\n");
+
+        alert(
+          `Available training plans:\n${
+            plansList || "No plans found"
+          }\n\nIndividual days:\n${individualDaysList || "No individual days"}`
+        );
+      }
+    } catch (err) {
+      console.error("Error loading trainings for listing:", err);
+      setError("Failed to load available trainings");
+    }
+  };
+
   return (
     <Box py={8}>
       {/* VOIX Context Elements */}
@@ -949,6 +1142,32 @@ const LiveWorkout = () => {
         )}
         . VOIX can create, add, remove, and replace exercises without UI
         interaction.
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="availableTrainings">
+        Available training plans: {availablePlans.length}. Plans:{" "}
+        {JSON.stringify(
+          availablePlans.map((plan) => ({
+            id: plan.id,
+            title: plan.title,
+            dayCount: availableDays.filter((day) => day.plan_id === plan.id)
+              .length,
+          }))
+        )}
+        . Available training days: {availableDays.length}. Days:{" "}
+        {JSON.stringify(
+          availableDays.map((day) => ({
+            id: day.id,
+            title: day.title,
+            dayNumber: day.day_number,
+            planId: day.plan_id,
+            exerciseCount: day.exercises?.length || 0,
+          }))
+        )}
+        . VOIX can load trainings by saying things like "nimm Tag 3 aus dem Push
+        Pull Plan" or "lade Brust Training" or "öffne Training Auswahl".
         {/* @ts-ignore */}
       </context>
 
@@ -1305,6 +1524,51 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name der neuen Übung"
+        />
+      </Tool>
+
+      {/* Training Selection Tools */}
+      <Tool
+        name="load_training_by_name"
+        description="Lädt ein Training anhand des Plan- und Tagesnamens oder der Tagesnummer"
+        onCall={handleLoadTrainingByName}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="planName"
+          type="string"
+          description="Name oder Teil des Namens des Trainingsplans (z.B. 'Push Pull', 'Ganzkörper')"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="dayName"
+          type="string"
+          description="Name oder Teil des Namens des Trainingstages (z.B. 'Push Day', 'Brust Training')"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="dayNumber"
+          type="number"
+          description="Nummer des Trainingstages im Plan (z.B. 1, 2, 3)"
+        />
+      </Tool>
+
+      <Tool
+        name="open_training_selection"
+        description="Öffnet das Trainingsauswahl-Menü"
+        onCall={handleOpenTrainingSelection}
+      />
+
+      <Tool
+        name="list_available_trainings"
+        description="Zeigt verfügbare Trainingspläne und -tage an"
+        onCall={handleListAvailableTrainings}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="planName"
+          type="string"
+          description="Name des Plans um nur dessen Tage anzuzeigen (optional)"
         />
       </Tool>
 
@@ -1979,6 +2243,289 @@ const LiveWorkout = () => {
               )}
             </Stack>
           </Grid>
+        )}
+
+        {/* Training Selection Modal */}
+        {isTrainingModalOpen && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            width="100vw"
+            height="100vh"
+            bg="rgba(0, 0, 0, 0.8)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="9999"
+            p={4}
+          >
+            <Box
+              bg="bg.secondary"
+              p={6}
+              rounded="lg"
+              borderColor="accent.primary"
+              borderWidth="2px"
+              maxW="800px"
+              maxH="80vh"
+              w="full"
+              overflow="hidden"
+            >
+              <Stack gap={6} h="full">
+                {/* Modal Header */}
+                <Stack direction="row" justify="space-between" align="center">
+                  <Heading size="lg" color="text.primary">
+                    <Flex align="center" gap={2}>
+                      <FaClipboardList />
+                      Select Training
+                    </Flex>
+                  </Heading>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsTrainingModalOpen(false)}
+                    bg="orange.500"
+                    color="black"
+                    _hover={{ bg: "orange.600", color: "black" }}
+                    borderRadius="md"
+                    fontWeight="bold"
+                  >
+                    <FaTimes />
+                  </Button>
+                </Stack>
+
+                {/* Loading State */}
+                {isLoadingPlans ? (
+                  <Flex justify="center" py={12}>
+                    <Stack align="center" gap={4}>
+                      <Spinner size="xl" color="accent.primary" />
+                      <Text color="text.secondary">Loading trainings...</Text>
+                    </Stack>
+                  </Flex>
+                ) : (
+                  <Box overflow="auto" flex="1">
+                    {/* Plans Selection */}
+                    {!selectedPlan ? (
+                      <Stack gap={4}>
+                        <Text color="text.secondary" fontSize="sm">
+                          Choose a training plan to see available days:
+                        </Text>
+
+                        <Grid
+                          templateColumns={{
+                            base: "1fr",
+                            md: "repeat(2, 1fr)",
+                          }}
+                          gap={4}
+                        >
+                          {availablePlans.map((plan) => (
+                            <Box
+                              key={plan.id}
+                              p={4}
+                              bg="bg.tertiary"
+                              borderColor="border"
+                              borderWidth="1px"
+                              rounded="md"
+                              cursor="pointer"
+                              transition="all 0.2s"
+                              _hover={{
+                                borderColor: "accent.primary",
+                                bg: "bg",
+                              }}
+                              onClick={() => setSelectedPlan(plan)}
+                            >
+                              <Stack gap={2}>
+                                <Text fontWeight="bold" color="text.primary">
+                                  <Flex align="center" gap={2}>
+                                    <FaCalendarAlt />
+                                    {plan.title}
+                                  </Flex>
+                                </Text>
+                                {plan.description && (
+                                  <Text fontSize="sm" color="text.secondary">
+                                    {plan.description}
+                                  </Text>
+                                )}
+                                <Text fontSize="xs" color="text.secondary">
+                                  {plan.days?.length || 0} training days
+                                </Text>
+                              </Stack>
+                            </Box>
+                          ))}
+                        </Grid>
+
+                        {/* Direct Day Selection (for days without plans) */}
+                        {availableDays.some((day) => !day.plan_id) && (
+                          <Box mt={6}>
+                            <Text color="text.secondary" fontSize="sm" mb={4}>
+                              Or choose from individual training days:
+                            </Text>
+
+                            <Grid
+                              templateColumns={{
+                                base: "1fr",
+                                md: "repeat(2, 1fr)",
+                              }}
+                              gap={3}
+                            >
+                              {availableDays
+                                .filter((day) => !day.plan_id)
+                                .map((day) => (
+                                  <Box
+                                    key={day.id}
+                                    p={3}
+                                    bg="bg.tertiary"
+                                    borderColor="border"
+                                    borderWidth="1px"
+                                    rounded="md"
+                                    cursor="pointer"
+                                    transition="all 0.2s"
+                                    _hover={{
+                                      borderColor: "accent.primary",
+                                      bg: "bg",
+                                    }}
+                                    onClick={() => selectTrainingDay(day.id!)}
+                                  >
+                                    <Stack gap={1}>
+                                      <Text
+                                        fontWeight="bold"
+                                        color="text.primary"
+                                        fontSize="sm"
+                                      >
+                                        <Flex align="center" gap={2}>
+                                          <FaDumbbell />
+                                          {day.title}
+                                        </Flex>
+                                      </Text>
+                                      {day.description && (
+                                        <Text
+                                          fontSize="xs"
+                                          color="text.secondary"
+                                        >
+                                          {day.description}
+                                        </Text>
+                                      )}
+                                      <Text
+                                        fontSize="xs"
+                                        color="text.secondary"
+                                      >
+                                        {day.exercises?.length || 0} exercises
+                                      </Text>
+                                    </Stack>
+                                  </Box>
+                                ))}
+                            </Grid>
+                          </Box>
+                        )}
+                      </Stack>
+                    ) : (
+                      /* Day Selection within Plan */
+                      <Stack gap={4}>
+                        <Flex align="center" gap={2}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedPlan(null)}
+                            bg="orange.500"
+                            color="black"
+                            _hover={{ bg: "orange.600", color: "black" }}
+                            borderRadius="md"
+                            fontWeight="bold"
+                          >
+                            <FaArrowLeft />
+                          </Button>
+                          <Text color="text.secondary" fontSize="sm">
+                            Training days in:{" "}
+                            <Text
+                              as="span"
+                              fontWeight="bold"
+                              color="text.primary"
+                            >
+                              {selectedPlan.title}
+                            </Text>
+                          </Text>
+                        </Flex>
+
+                        <Grid
+                          templateColumns={{
+                            base: "1fr",
+                            md: "repeat(2, 1fr)",
+                          }}
+                          gap={4}
+                        >
+                          {availableDays
+                            .filter((day) => day.plan_id === selectedPlan.id)
+                            .sort((a, b) => a.day_number - b.day_number)
+                            .map((day) => (
+                              <Box
+                                key={day.id}
+                                p={4}
+                                bg="bg.tertiary"
+                                borderColor="border"
+                                borderWidth="1px"
+                                rounded="md"
+                                cursor="pointer"
+                                transition="all 0.2s"
+                                _hover={{
+                                  borderColor: "accent.primary",
+                                  bg: "bg",
+                                }}
+                                onClick={() => selectTrainingDay(day.id!)}
+                              >
+                                <Stack gap={2}>
+                                  <Text fontWeight="bold" color="text.primary">
+                                    <Flex align="center" gap={2}>
+                                      <FaDumbbell />
+                                      Day {day.day_number}: {day.title}
+                                    </Flex>
+                                  </Text>
+                                  {day.description && (
+                                    <Text fontSize="sm" color="text.secondary">
+                                      {day.description}
+                                    </Text>
+                                  )}
+                                  <Text fontSize="xs" color="text.secondary">
+                                    {day.exercises?.length || 0} exercises
+                                  </Text>
+                                </Stack>
+                              </Box>
+                            ))}
+                        </Grid>
+
+                        {availableDays.filter(
+                          (day) => day.plan_id === selectedPlan.id
+                        ).length === 0 && (
+                          <Box p={8} textAlign="center">
+                            <Text color="text.secondary">
+                              No training days found for this plan.
+                            </Text>
+                          </Box>
+                        )}
+                      </Stack>
+                    )}
+
+                    {/* Empty State */}
+                    {availablePlans.length === 0 &&
+                      availableDays.length === 0 &&
+                      !isLoadingPlans && (
+                        <Box p={8} textAlign="center">
+                          <Stack gap={4} align="center">
+                            <FaExclamationTriangle size={48} color="orange" />
+                            <Text color="text.primary" fontWeight="bold">
+                              No Trainings Available
+                            </Text>
+                            <Text color="text.secondary" fontSize="sm">
+                              Create some training plans and days first to use
+                              this feature.
+                            </Text>
+                          </Stack>
+                        </Box>
+                      )}
+                  </Box>
+                )}
+              </Stack>
+            </Box>
+          </Box>
         )}
 
         {/* Pause Timer Popup */}
