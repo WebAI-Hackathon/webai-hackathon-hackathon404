@@ -1,4 +1,4 @@
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -8,8 +8,11 @@ import {
   Stack,
   Grid,
 } from "@chakra-ui/react";
+import { Tool } from "../components/Tool";
 
 const Home = () => {
+  const navigate = useNavigate();
+  
   const features = [
     {
       icon: "📋",
@@ -31,10 +34,69 @@ const Home = () => {
     },
   ];
 
+  // VOIX Quick Start Tools
+  const handleStartTrainingPlan = async (event: Event) => {
+    navigate("/trainingsplan");
+    (event.target as any).dispatchEvent(new CustomEvent('return', { 
+      detail: {
+        message: "Trainingsplan erfolgreich gestartet",
+        action: "start_training_plan"
+      }
+    }));
+  };
+
+  const handleStartLiveWorkout = async (event: Event) => {
+    navigate("/live-workout");
+    (event.target as any).dispatchEvent(new CustomEvent('return', { 
+      detail: {
+        message: "Live Workout erfolgreich gestartet",
+        action: "start_live_workout"
+      }
+    }));
+  };
+
+  const handleViewStatistics = async (event: Event) => {
+    navigate("/statistiken");
+    (event.target as any).dispatchEvent(new CustomEvent('return', { 
+      detail: {
+        message: "Statistiken erfolgreich geöffnet",
+        action: "view_statistics"
+      }
+    }));
+  };
+
   // ...existing code...
 
   return (
-    <Box>
+    <>
+      {/* VOIX Quick Start Tools */}
+      <Tool 
+        name="start_training_plan" 
+        description="Starte einen neuen Trainingsplan oder öffne bestehenden Plan"
+        onCall={handleStartTrainingPlan}
+        return
+      />
+      
+      <Tool 
+        name="start_live_workout" 
+        description="Starte ein Live Workout-Training"
+        onCall={handleStartLiveWorkout}
+        return
+      />
+      
+      <Tool 
+        name="view_statistics" 
+        description="Öffne die Trainingsstatistiken und Fortschrittsanzeige"
+        onCall={handleViewStatistics}
+        return
+      />
+
+      {/* Context für AI */}
+      <div data-context="fitness_app_home">
+        Willkommen bei Planetic Gym! Verfügbare Aktionen: Trainingsplan starten, Live Workout beginnen, Statistiken anzeigen. Die App bietet personalisierte Trainingspläne, interaktive Live Workouts und detaillierte Fortschrittsverfolgung.
+      </div>
+
+      <Box>
       {/* Hero Section */}
       <Box
         py={{ base: 20, md: 32 }}
@@ -153,6 +215,7 @@ const Home = () => {
 
       {/* Quick Stats Section entfernt */}
     </Box>
+    </>
   );
 };
 
