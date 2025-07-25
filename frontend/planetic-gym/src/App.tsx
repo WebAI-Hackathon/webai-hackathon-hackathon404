@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
-  BrowserRouter,
+  HashRouter,
 } from "react-router-dom";
 import { Box } from "@chakra-ui/react";
 import Header from "./components/Header";
@@ -28,7 +27,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter basename="webai-hackathon-hackathon404">
+    <HashRouter>
       <Box minH="100vh" bg="bg">
         <Header />
         {/* WelcomePopup entfernt */}
@@ -41,7 +40,7 @@ function App() {
           </Routes>
         </Box>
       </Box>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
