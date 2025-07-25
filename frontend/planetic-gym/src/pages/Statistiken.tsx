@@ -10,7 +10,22 @@ import {
   Spinner,
   Grid,
   Button,
+  Flex,
 } from "@chakra-ui/react";
+import {
+  FaChartLine,
+  FaFilePdf,
+  FaExclamationTriangle,
+  FaChartBar,
+  FaTrophy,
+  FaWeight,
+  FaCalendarAlt,
+  FaDumbbell,
+  FaFire,
+  FaCheckCircle,
+  FaClock,
+  FaClipboardList,
+} from "react-icons/fa";
 import {
   LineChart,
   Line,
@@ -84,11 +99,7 @@ const Statistiken = () => {
       pdf.setFontSize(20);
       pdf.text("Training statistics", 20, 20);
       pdf.setFontSize(12);
-      pdf.text(
-        `Created on: ${new Date().toLocaleDateString("de-DE")}`,
-        20,
-        30
-      );
+      pdf.text(`Created on: ${new Date().toLocaleDateString("de-DE")}`, 20, 30);
 
       position = 40;
 
@@ -345,14 +356,17 @@ const Statistiken = () => {
         />
 
         {/* Context für AI */}
-        <div data-context="training_statistics">{statisticsContext()}</div>
+        <div data-context="training_statistics" style={{ display: "none" }}>
+          {statisticsContext()}
+        </div>
 
         <div ref={statisticsContentRef}>
           <Stack gap={8}>
             <HStack justify="space-between" align="center">
-              <Heading color="text.primary" textAlign="center">
-                📊 Training-statistics
-              </Heading>
+              <Flex align="center" gap={3}>
+                <FaChartLine size="2rem" color="var(--colors-accent-primary)" />
+                <Heading color="text.primary">Training Statistics</Heading>
+              </Flex>
 
               {/* PDF Export Button */}
               <Button
@@ -364,7 +378,12 @@ const Statistiken = () => {
                 size="md"
                 px={6}
               >
-                📄 {exportingPDF ? "PDF is creating..." : "PDF Export"}
+                <Flex align="center" gap={2}>
+                  <FaFilePdf />
+                  <Text>
+                    {exportingPDF ? "PDF is creating..." : "PDF Export"}
+                  </Text>
+                </Flex>
               </Button>
             </HStack>
 
@@ -384,9 +403,12 @@ const Statistiken = () => {
                 rounded="lg"
                 textAlign="center"
               >
-                <Text color="red.600" fontWeight="bold" mb={2}>
-                  ⚠️ Error while loading:
-                </Text>
+                <Flex align="center" justify="center" gap={2} mb={2}>
+                  <FaExclamationTriangle color="var(--colors-red-600)" />
+                  <Text color="red.600" fontWeight="bold">
+                    Error while loading:
+                  </Text>
+                </Flex>
                 <Text color="red.600">{error}</Text>
               </Box>
             )}
@@ -400,21 +422,23 @@ const Statistiken = () => {
                 rounded="lg"
                 textAlign="center"
               >
-                <Text color="text.secondary" fontSize="lg" mb={4}>
-                  🎯 Statistics ready for showing
-                </Text>
+                <Flex align="center" justify="center" gap={2} mb={4}>
+                  <FaTrophy
+                    color="var(--colors-accent-primary)"
+                    size="1.5rem"
+                  />
+                  <Text color="text.secondary" fontSize="lg">
+                    Statistics ready for showing
+                  </Text>
+                </Flex>
                 <Text color="text.secondary">
                   Tell the AI what statistics you want to see:
                 </Text>
                 <Box mt={4} color="text.secondary" fontSize="sm">
-                  <Text>
-                    • "Show me an overview of my training statistics"
-                  </Text>
+                  <Text>• "Show me an overview of my training statistics"</Text>
                   <Text>• "Show exercise frequencies"</Text>
-                  <Text>• "Show my progress diagrams"</Text>                    
-                  <Text>
-                    • "How are my training plan statistics?"
-                  </Text>
+                  <Text>• "Show my progress diagrams"</Text>
+                  <Text>• "How are my training plan statistics?"</Text>
                 </Box>
               </Box>
             )}
@@ -428,9 +452,15 @@ const Statistiken = () => {
                 borderWidth="1px"
                 rounded="lg"
               >
-                <Heading size="md" color="text.primary" mb={6}>
-                  📊 Performance Overview
-                </Heading>
+                <Flex align="center" gap={3} mb={6}>
+                  <FaChartBar
+                    size="1.5rem"
+                    color="var(--colors-accent-primary)"
+                  />
+                  <Heading size="md" color="text.primary">
+                    Performance Overview
+                  </Heading>
+                </Flex>
                 <Grid
                   templateColumns={{
                     base: "repeat(2, 1fr)",
@@ -446,7 +476,7 @@ const Statistiken = () => {
                       100
                     )}
                     color="#3B82F6"
-                    label="Workout Fortschritt"
+                    label="Workout Progress"
                     value={`${overallStats.workout_stats.total_workouts}/20`}
                     size={100}
                   />
@@ -458,7 +488,7 @@ const Statistiken = () => {
                       100
                     )}
                     color="#10B981"
-                    label="Übungsvielfalt"
+                    label="Exercise Variety"
                     value={`${overallStats.extended_exercise_stats.length}/15`}
                     size={100}
                   />
@@ -470,7 +500,7 @@ const Statistiken = () => {
                         overallStats.plan_statistics[0]?.completion_rate || 0
                       }
                       color="#F59E0B"
-                      label="Plan Vollständigkeit"
+                      label="Plan Completion"
                       value={`${Math.round(
                         overallStats.plan_statistics[0]?.completion_rate || 0
                       )}%`}
@@ -491,7 +521,7 @@ const Statistiken = () => {
                         100
                       )}
                       color="#EF4444"
-                      label="All sets"
+                      label="Total Sets"
                       value={`${overallStats.extended_exercise_stats.reduce(
                         (sum, ex) => sum + ex.total_sets,
                         0
@@ -528,9 +558,15 @@ const Statistiken = () => {
                 borderWidth="1px"
                 rounded="lg"
               >
-                <Heading size="md" color="text.primary" mb={6}>
-                  🏋️ Übungshäufigkeiten
-                </Heading>
+                <Flex align="center" gap={3} mb={6}>
+                  <FaDumbbell
+                    size="1.5rem"
+                    color="var(--colors-accent-primary)"
+                  />
+                  <Heading size="md" color="text.primary">
+                    Exercise Frequencies
+                  </Heading>
+                </Flex>
                 <Grid
                   templateColumns={{
                     base: "1fr",
@@ -617,9 +653,15 @@ const Statistiken = () => {
                 borderWidth="1px"
                 rounded="lg"
               >
-                <Heading size="md" color="text.primary" mb={6}>
-                  📈 Weight Progress
-                </Heading>
+                <Flex align="center" gap={3} mb={6}>
+                  <FaWeight
+                    size="1.5rem"
+                    color="var(--colors-accent-primary)"
+                  />
+                  <Heading size="md" color="text.primary">
+                    Weight Progress
+                  </Heading>
+                </Flex>
                 <Grid
                   templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }}
                   gap={6}
@@ -708,7 +750,7 @@ const Statistiken = () => {
                               stroke="#3B82F6"
                               strokeWidth={2}
                               dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
-                              name="Gewicht (kg)"
+                              name="Weight (kg)"
                             />
                             <Line
                               type="monotone"
@@ -736,9 +778,15 @@ const Statistiken = () => {
                 borderWidth="1px"
                 rounded="lg"
               >
-                <Heading size="md" color="text.primary" mb={6}>
-                  📋 Trainingsplan-Statistiken
-                </Heading>
+                <Flex align="center" gap={3} mb={6}>
+                  <FaClipboardList
+                    size="1.5rem"
+                    color="var(--colors-accent-primary)"
+                  />
+                  <Heading size="md" color="text.primary">
+                    Training Plan Statistics
+                  </Heading>
+                </Flex>
                 <Grid
                   templateColumns={{
                     base: "1fr",
@@ -781,7 +829,7 @@ const Statistiken = () => {
 
                           <Stack direction="row" justify="space-between">
                             <Text color="text.secondary" fontSize="sm">
-                              Excercises:
+                              Exercises:
                             </Text>
                             <Text color="text.primary" fontSize="sm">
                               {plan.total_exercises}
@@ -790,7 +838,7 @@ const Statistiken = () => {
 
                           <Stack direction="row" justify="space-between">
                             <Text color="text.secondary" fontSize="sm">
-                              Completeness:
+                              Completion:
                             </Text>
                             <Text
                               color={

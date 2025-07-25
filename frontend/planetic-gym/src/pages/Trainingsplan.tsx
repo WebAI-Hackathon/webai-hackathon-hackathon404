@@ -95,7 +95,7 @@ const Trainingsplan = () => {
       days: plan.days.map((day) => ({
         id: day.id?.toString() || "",
         name: day.title,
-        focus: day.description || "Ganzkörper",
+        focus: day.description || "Full Body",
         exercises: day.exercises.map((exercise) => ({
           id: exercise.id, // Backend Exercise ID mitführen
           name: exercise.title,
@@ -140,7 +140,7 @@ const Trainingsplan = () => {
     doc.setFontSize(16);
     doc.text("Training Plan Export", 20, 35);
 
-    // Trainingswoche und Tag
+    // Trainingswoche und Day
     doc.setFontSize(14);
     doc.text(`Training Week: ${weekName}`, 20, 50);
     doc.text(`Training Day: ${day.name}`, 20, 60);
@@ -376,7 +376,7 @@ const Trainingsplan = () => {
       await refreshData();
     } catch (error) {
       console.error("Error updating week:", error);
-      setError("Fehler beim Aktualisieren der Trainingswoche");
+      setError("Error updating training week");
     }
   };
 
@@ -389,7 +389,7 @@ const Trainingsplan = () => {
       }
     } catch (error) {
       console.error("Error deleting week:", error);
-      setError("Fehler beim Löschen der Trainingswoche");
+      setError("Error deleting training week");
     }
   };
 
@@ -499,12 +499,12 @@ const Trainingsplan = () => {
         throw new Error("Failed to create training plan");
       }
 
-      // Erstelle alle Tage mit ihren Übungen
+      // Erstelle alle Daye mit ihren Übungen
       if (details.days && details.days.length > 0) {
         for (let dayIndex = 0; dayIndex < details.days.length; dayIndex++) {
           const day = details.days[dayIndex];
 
-          // Erstelle Übungen für diesen Tag
+          // Erstelle Übungen für diesen Day
           let exerciseIds: number[] = [];
           if (day.exercises && day.exercises.length > 0) {
             const exercisePromises = day.exercises
@@ -596,7 +596,7 @@ const Trainingsplan = () => {
 
       // Update Übungen im Backend falls vorhanden
       if (details.exercises && details.exercises.length > 0) {
-        // Finde den aktuellen Tag um die Exercise IDs zu bekommen
+        // Finde den aktuellen Day um die Exercise IDs zu bekommen
         const currentDay = trainingWeeks
           .flatMap((week) => week.days)
           .find((day) => day.id === details.dayId);
@@ -742,7 +742,7 @@ const Trainingsplan = () => {
       await refreshData();
     } catch (error) {
       console.error("Error updating week:", error);
-      setError("Fehler beim Aktualisieren der Trainingswoche");
+      setError("Error updating training week");
     }
   };
 
@@ -764,9 +764,7 @@ const Trainingsplan = () => {
       {/* @ts-ignore */}
       <context name="appState">
         The app currently shows {trainingWeeks.length} training weeks.
-        {selectedDay
-          ? `Day ${selectedDay} is selected.`
-          : "No day selected."}
+        {selectedDay ? `Day ${selectedDay} is selected.` : "No day selected."}
         {showNewWeekDialog ? "Dialog for new week is open." : ""}
         {showNewDayDialog ? "Dialog for new day is open." : ""}
         {showEditDayDialog ? "Dialog for editing day is open." : ""}
@@ -860,157 +858,153 @@ const Trainingsplan = () => {
         </prop>
       </Tool>
 
-<Tool
-  name="create_training_week"
-  description="Creates a new training week with name and description"
-  onCall={handleCreateWeek}
->
-  {/* @ts-ignore */}
-  <prop
-    name="name"
-    type="string"
-    required
-    description="Name of the new training week"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="description"
-    type="string"
-    description="Description of the training week"
-  />
-</Tool>
-
-<Tool
-  name="create_training_day"
-  description="Creates a new training day in a specific week"
-  onCall={handleCreateDay}
->
-  {/* @ts-ignore */}
-  <prop
-    name="weekId"
-    type="string"
-    required
-    description="ID of the week to which the day should be added"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="name"
-    type="string"
-    required
-    description="Name of the training day"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="focus"
-    type="string"
-    required
-    description="Training focus (e.g. upper body, lower body, full body)"
-  />
-  {/* @ts-ignore */}
-  <prop name="exercises" type="array" description="List of exercises">
-    {/* @ts-ignore */}
-    <array>
-      {/* @ts-ignore */}
-      <dict>
+      <Tool
+        name="create_training_week"
+        description="Creates a new training week with name and description"
+        onCall={handleCreateWeek}
+      >
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           required
-          description="Name of the exercise"
+          description="Name of the new training week"
         />
         {/* @ts-ignore */}
         <prop
-          name="repetitions"
-          type="number"
-          required
-          description="Number of repetitions"
+          name="description"
+          type="string"
+          description="Description of the training week"
         />
-        {/* @ts-ignore */}
-        <prop
-          name="weight"
-          type="number"
-          description="Weight in kg (default: 0)"
-        />
-        {/* @ts-ignore */}
-      </dict>
-      {/* @ts-ignore */}
-    </array>
-    {/* @ts-ignore */}
-  </prop>
-</Tool>
+      </Tool>
 
-<Tool
-  name="edit_training_day"
-  description="Edits an existing training day"
-  onCall={handleEditDay}
->
-  {/* @ts-ignore */}
-  <prop
-    name="dayId"
-    type="string"
-    required
-    description="ID of the training day to be edited"
-  />
-  {/* @ts-ignore */}
-  <prop
-    name="name"
-    type="string"
-    description="New name of the training day"
-  />
-  {/* @ts-ignore */}
-  <prop name="focus" type="string" description="New training focus" />
-  {/* @ts-ignore */}
-  <prop
-    name="exercises"
-    type="array"
-    description="New list of exercises"
-  >
-    {/* @ts-ignore */}
-    <array>
-      {/* @ts-ignore */}
-      <dict>
+      <Tool
+        name="create_training_day"
+        description="Creates a new training day in a specific week"
+        onCall={handleCreateDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID of the week to which the day should be added"
+        />
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           required
-          description="Name of the exercise"
+          description="Name of the training day"
         />
         {/* @ts-ignore */}
         <prop
-          name="repetitions"
-          type="number"
+          name="focus"
+          type="string"
           required
-          description="Number of repetitions"
+          description="Training focus (e.g. upper body, lower body, full body)"
         />
         {/* @ts-ignore */}
-        <prop name="weight" type="number" description="Weight in kg" />
-        {/* @ts-ignore */}
-      </dict>
-      {/* @ts-ignore */}
-    </array>
-    {/* @ts-ignore */}
-  </prop>
-</Tool>
+        <prop name="exercises" type="array" description="List of exercises">
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name of the exercise"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="repetitions"
+                type="number"
+                required
+                description="Number of repetitions"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="weight"
+                type="number"
+                description="Weight in kg (default: 0)"
+              />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
 
-<Tool
-  name="delete_training_day"
-  description="Deletes a training day"
-  onCall={handleDeleteDay}
->
-  {/* @ts-ignore */}
-  <prop
-    name="dayId"
-    type="string"
-    required
-    description="ID of the training day to be deleted"
-  />
-</Tool>
+      <Tool
+        name="edit_training_day"
+        description="Edits an existing training day"
+        onCall={handleEditDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID of the training day to be edited"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          description="New name of the training day"
+        />
+        {/* @ts-ignore */}
+        <prop name="focus" type="string" description="New training focus" />
+        {/* @ts-ignore */}
+        <prop name="exercises" type="array" description="New list of exercises">
+          {/* @ts-ignore */}
+          <array>
+            {/* @ts-ignore */}
+            <dict>
+              {/* @ts-ignore */}
+              <prop
+                name="name"
+                type="string"
+                required
+                description="Name of the exercise"
+              />
+              {/* @ts-ignore */}
+              <prop
+                name="repetitions"
+                type="number"
+                required
+                description="Number of repetitions"
+              />
+              {/* @ts-ignore */}
+              <prop name="weight" type="number" description="Weight in kg" />
+              {/* @ts-ignore */}
+            </dict>
+            {/* @ts-ignore */}
+          </array>
+          {/* @ts-ignore */}
+        </prop>
+      </Tool>
+
+      <Tool
+        name="delete_training_day"
+        description="Deletes a training day"
+        onCall={handleDeleteDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID of the training day to be deleted"
+        />
+      </Tool>
 
       <Tool
         name="delete_training_week"
-        description="Löscht eine Trainingswoche"
+        description="Deletes a training week"
         onCall={handleDeleteWeek}
       >
         {/* @ts-ignore */}
@@ -1018,13 +1012,13 @@ const Trainingsplan = () => {
           name="weekId"
           type="string"
           required
-          description="ID der zu löschenden Trainingswoche"
+          description="ID of the training week to be deleted"
         />
       </Tool>
 
       <Tool
         name="edit_training_week"
-        description="Bearbeitet eine bestehende Trainingswoche"
+        description="Edits an existing training week"
         onCall={handleEditWeek}
       >
         {/* @ts-ignore */}
@@ -1032,42 +1026,42 @@ const Trainingsplan = () => {
           name="weekId"
           type="string"
           required
-          description="ID der zu bearbeitenden Trainingswoche"
+          description="ID of the training week to be edited"
         />
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
-          description="Neuer Name der Trainingswoche"
+          description="New name of the training week"
         />
         {/* @ts-ignore */}
         <prop
           name="description"
           type="string"
-          description="Neue Beschreibung der Trainingswoche"
+          description="New description of the training week"
         />
       </Tool>
 
-<Tool
-  name="start_workout"
-  description="Starts a workout for a specific day"
-  onCall={handleStartWorkout}
->
-  {/* @ts-ignore */}
-  <prop
-    name="dayId"
-    type="string"
-    required
-    description="ID of the training day to start"
-  />
-</Tool>
+      <Tool
+        name="start_workout"
+        description="Starts a workout for a specific day"
+        onCall={handleStartWorkout}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="dayId"
+          type="string"
+          required
+          description="ID of the training day to start"
+        />
+      </Tool>
 
       <Container maxW="6xl">
         <Stack gap={4} textAlign="center" mb={12}>
           <Flex align="center" justify="center" gap={3}>
             <FaClipboardList size="2rem" color="var(--colors-accent-primary)" />
             <Heading size="2xl" color="text.primary">
-              Deine Trainingspläne
+              Your Training Plans
             </Heading>
           </Flex>
           <Text fontSize="lg" color="text.secondary">
@@ -1077,9 +1071,8 @@ const Trainingsplan = () => {
             <Flex align="center" justify="center" gap={2}>
               <FaCheckCircle color="green" />
               <Text fontSize="sm" color="green.600">
-                {trainingWeeks.length} Trainingsplan
-                {trainingWeeks.length !== 1 ? "e" : ""} aus der Datenbank
-                geladen
+                {trainingWeeks.length} training plan
+                {trainingWeeks.length !== 1 ? "s" : ""} loaded from database
               </Text>
             </Flex>
           )}
@@ -1111,7 +1104,7 @@ const Trainingsplan = () => {
           >
             <Flex align="center" gap={2}>
               <FaPlus />
-              <Text>Neue Woche</Text>
+              <Text>New Week</Text>
             </Flex>
           </Button>
         </Flex>
@@ -1127,11 +1120,10 @@ const Trainingsplan = () => {
             <Flex direction="column" align="center" gap={4}>
               <FaDumbbell size="4rem" color="var(--colors-text-secondary)" />
               <Text fontSize="xl" color="text.secondary">
-                Keine Trainingspläne in der Datenbank gefunden
+                No training plans found in database
               </Text>
               <Text color="text.secondary">
-                Erstelle deinen ersten Trainingsplan, um ihn in der Datenbank zu
-                speichern!
+                Create your first training plan to save it to the database!
               </Text>
               <Button
                 onClick={addNewWeek}
@@ -1142,7 +1134,7 @@ const Trainingsplan = () => {
               >
                 <Flex align="center" gap={2}>
                   <FaPlus />
-                  <Text>Ersten Plan erstellen</Text>
+                  <Text>Create First Plan</Text>
                 </Flex>
               </Button>
             </Flex>
@@ -1166,7 +1158,7 @@ const Trainingsplan = () => {
                           <IconButton
                             variant="ghost"
                             size="sm"
-                            aria-label="Trainingsplan bearbeiten"
+                            aria-label="Edit training plan"
                           >
                             <FaCog />
                           </IconButton>
@@ -1175,7 +1167,7 @@ const Trainingsplan = () => {
                           <MenuItem value="edit" onClick={() => editWeek(week)}>
                             <Flex align="center" gap={2}>
                               <FaEdit />
-                              <Text>Bearbeiten</Text>
+                              <Text>Edit</Text>
                             </Flex>
                           </MenuItem>
                           <MenuItem
@@ -1185,7 +1177,7 @@ const Trainingsplan = () => {
                           >
                             <Flex align="center" gap={2}>
                               <FaTrash />
-                              <Text>Löschen</Text>
+                              <Text>Delete</Text>
                             </Flex>
                           </MenuItem>
                         </MenuContent>
@@ -1199,7 +1191,7 @@ const Trainingsplan = () => {
                       >
                         <Flex align="center" gap={1}>
                           <FaPlus size="0.8rem" />
-                          <Text>Tag</Text>
+                          <Text>Day</Text>
                         </Flex>
                       </Button>
                     </Flex>
@@ -1350,7 +1342,7 @@ const Trainingsplan = () => {
               <Flex align="center" justify="center" gap={2} mb={4}>
                 <FaFire color="var(--colors-accent-primary)" />
                 <Heading size="md" color="text.primary">
-                  Trainingstipps
+                  Training Tips
                 </Heading>
               </Flex>
               <Grid
@@ -1442,7 +1434,7 @@ const Trainingsplan = () => {
             <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
               <Stack gap={4}>
                 <Heading size="md" color="text.primary">
-                  Neue Trainingswoche erstellen
+                  Create new Training Plan
                 </Heading>
 
                 <Stack gap={3}>
@@ -1453,14 +1445,14 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Name der Woche:
+                      Name of Training Plan:
                     </Text>
                     <Input
                       value={newWeekData.name}
                       onChange={(e) =>
                         setNewWeekData({ ...newWeekData, name: e.target.value })
                       }
-                      placeholder="z.B. Kraft Woche 1"
+                      placeholder="e.g. Strength Week 1"
                     />
                   </Box>
 
@@ -1471,7 +1463,7 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Beschreibung:
+                      Description:
                     </Text>
                     <Textarea
                       value={newWeekData.description}
@@ -1481,7 +1473,7 @@ const Trainingsplan = () => {
                           description: e.target.value,
                         })
                       }
-                      placeholder="Beschreibung der Trainingswoche..."
+                      placeholder="Description of the training week..."
                     />
                   </Box>
                 </Stack>
@@ -1489,22 +1481,22 @@ const Trainingsplan = () => {
                 <Flex gap={3} justify="end">
                   <Button
                     onClick={() => {
-                      setShowEditWeekDialog(false);
-                      setEditingWeek(null);
+                      setShowNewWeekDialog(false);
+                      setNewWeekData({ name: "", description: "" });
                     }}
                     bg="gray.500"
                     color="white"
                     _hover={{ bg: "gray.600" }}
                   >
-                    Abbrechen
+                    Cancel
                   </Button>
                   <Button
-                    onClick={updateWeek}
+                    onClick={createNewWeek}
                     bg="accent.primary"
                     color="white"
                     _hover={{ bg: "accent.secondary" }}
                   >
-                    Erstellen
+                    Create
                   </Button>
                 </Flex>
               </Stack>
@@ -1512,7 +1504,7 @@ const Trainingsplan = () => {
           </Box>
         )}
 
-        {/* Dialog für Trainingswoche bearbeiten */}
+        {/* Dialog für Edit Training Week */}
         {showEditWeekDialog && (
           <Box
             position="fixed"
@@ -1529,7 +1521,7 @@ const Trainingsplan = () => {
             <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
               <Stack gap={4}>
                 <Heading size="md" color="text.primary">
-                  Trainingswoche bearbeiten
+                  Edit Training Week
                 </Heading>
 
                 <Stack gap={3}>
@@ -1540,14 +1532,14 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Name der Woche:
+                      Week Name:
                     </Text>
                     <Input
                       value={newWeekData.name}
                       onChange={(e) =>
                         setNewWeekData({ ...newWeekData, name: e.target.value })
                       }
-                      placeholder="z.B. Kraft Woche 1"
+                      placeholder="e.g. Strength Week 1"
                     />
                   </Box>
 
@@ -1558,7 +1550,7 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Beschreibung:
+                      Description:
                     </Text>
                     <Textarea
                       value={newWeekData.description}
@@ -1568,7 +1560,7 @@ const Trainingsplan = () => {
                           description: e.target.value,
                         })
                       }
-                      placeholder="Beschreibung der Trainingswoche..."
+                      placeholder="Description of the training week..."
                     />
                   </Box>
                 </Stack>
@@ -1583,7 +1575,7 @@ const Trainingsplan = () => {
                     color="white"
                     _hover={{ bg: "gray.600" }}
                   >
-                    Abbrechen
+                    Cancel
                   </Button>
                   <Button
                     onClick={updateWeek}
@@ -1591,7 +1583,7 @@ const Trainingsplan = () => {
                     color="white"
                     _hover={{ bg: "accent.secondary" }}
                   >
-                    Speichern
+                    Save
                   </Button>
                 </Flex>
               </Stack>
@@ -1671,7 +1663,7 @@ const Trainingsplan = () => {
                           <Flex gap={2} align="end">
                             <Box flex="1">
                               <Text fontSize="xs" mb={1}>
-                                Übung:
+                                Exercise:
                               </Text>
                               <Input
                                 value={exercise.name}
@@ -1688,12 +1680,12 @@ const Trainingsplan = () => {
                                     exercises: newExercises,
                                   });
                                 }}
-                                placeholder="Enter excercise..."
+                                placeholder="Enter exercise..."
                               />
                             </Box>
                             <Box w="80px">
                               <Text fontSize="xs" mb={1}>
-                                Wdh:
+                                Reps:
                               </Text>
                               <Input
                                 type="number"
@@ -1778,7 +1770,7 @@ const Trainingsplan = () => {
                       >
                         <Flex align="center" gap={1}>
                           <FaPlus size="0.8rem" />
-                          <Text>Übung hinzufügen</Text>
+                          <Text>Add Exercise</Text>
                         </Flex>
                       </Button>
                     </Stack>
@@ -1808,7 +1800,7 @@ const Trainingsplan = () => {
           </Box>
         )}
 
-        {/* Dialog für Tag bearbeiten */}
+        {/* Dialog für Day bearbeiten */}
         {showEditDayDialog && (
           <Box
             position="fixed"
@@ -1851,7 +1843,7 @@ const Trainingsplan = () => {
                       onChange={(e) =>
                         setNewDayData({ ...newDayData, name: e.target.value })
                       }
-                      placeholder="e.g. upper body power"
+                      placeholder="e.g. Upper Body Power"
                     />
                   </Box>
 
@@ -1862,14 +1854,14 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Trainings-Fokus:
+                      Training Focus:
                     </Text>
                     <Input
                       value={newDayData.focus}
                       onChange={(e) =>
                         setNewDayData({ ...newDayData, focus: e.target.value })
                       }
-                      placeholder="z.B. Upper body, Lower body, Cardio..."
+                      placeholder="e.g. Upper Body, Lower Body, Cardio..."
                     />
                   </Box>
 
@@ -1880,7 +1872,7 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Übungen:
+                      Exercises:
                     </Text>
                     <Stack gap={2}>
                       {newDayData.exercises.map((exercise, index) => (
@@ -1888,7 +1880,7 @@ const Trainingsplan = () => {
                           <Flex gap={2} align="end">
                             <Box flex="1">
                               <Text fontSize="xs" mb={1}>
-                                Übung:
+                                Exercise:
                               </Text>
                               <Input
                                 value={exercise.name}
@@ -1905,12 +1897,12 @@ const Trainingsplan = () => {
                                     exercises: newExercises,
                                   });
                                 }}
-                                placeholder="Enter excercise..."
+                                placeholder="Enter exercise..."
                               />
                             </Box>
                             <Box w="80px">
                               <Text fontSize="xs" mb={1}>
-                                Wdh:
+                                Reps:
                               </Text>
                               <Input
                                 type="number"
@@ -1995,7 +1987,7 @@ const Trainingsplan = () => {
                       >
                         <Flex align="center" gap={1}>
                           <FaPlus size="0.8rem" />
-                          <Text>Übung hinzufügen</Text>
+                          <Text>Add Exercise</Text>
                         </Flex>
                       </Button>
                     </Stack>
