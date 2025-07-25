@@ -1,5 +1,11 @@
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { Box, Container, Flex, Heading, Button, Stack } from "@chakra-ui/react";
+import {
+  FaClipboardList,
+  FaDumbbell,
+  FaChartLine,
+  FaWeight,
+} from "react-icons/fa";
 import { Tool } from "./Tool";
 
 const Header = () => {
@@ -7,9 +13,9 @@ const Header = () => {
   const navigate = useNavigate();
 
   const navItems = [
-    { path: "/trainingsplan", label: "📋 Trainingsplan" },
-    { path: "/live-workout", label: "🏃‍♂️ Live Workout" },
-    { path: "/statistiken", label: "📊 Statistiken" },
+    { path: "/trainingsplan", label: "Training Plans", icon: FaClipboardList },
+    { path: "/live-workout", label: "Live Workout", icon: FaDumbbell },
+    { path: "/statistiken", label: "Statistics", icon: FaChartLine },
   ];
 
   // VOIX Navigation Tools
@@ -93,7 +99,7 @@ const Header = () => {
       />
 
       {/* Context für AI */}
-      <div data-context="navigation">
+      <div data-context="navigation" style={{ display: "none" }}>
         Aktuelle Seite: {location.pathname}. Verfügbare Navigationsziele:
         Startseite (/), Trainingsplan (/trainingsplan), Live Workout
         (/live-workout), Statistiken (/statistiken).
@@ -117,7 +123,10 @@ const Header = () => {
             <Box mr={12}>
               <RouterLink to="/" style={{ textDecoration: "none" }}>
                 <Heading size="lg" color="accent.primary" fontWeight="bold">
-                  💪 Planetic Gym
+                  <Flex align="center" gap={2}>
+                    <FaWeight />
+                    Planetic Gym
+                  </Flex>
                 </Heading>
               </RouterLink>
             </Box>
@@ -145,7 +154,10 @@ const Header = () => {
                       size="md"
                       fontWeight={isActive ? "bold" : "medium"}
                     >
-                      {item.label}
+                      <Flex align="center" gap={2}>
+                        <item.icon />
+                        {item.label}
+                      </Flex>
                     </Button>
                   </RouterLink>
                 );
