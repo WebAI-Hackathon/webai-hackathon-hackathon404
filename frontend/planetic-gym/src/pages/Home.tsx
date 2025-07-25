@@ -16,59 +16,53 @@ const Home = () => {
   const features = [
     {
       icon: "📋",
-      title: "Personalisierte Trainingspläne",
+      title: "Personalized Training Plans",
       description:
-        "Individuelle Pläne, die sich an deine Ziele und dein Fitnesslevel anpassen",
+        "Individual plans tailored to your goals and fitness level",
     },
     {
       icon: "🏃‍♂️",
       title: "Live Workouts",
       description:
-        "Trainiere in Echtzeit mit unserer interaktiven Workout-Führung",
+        "Train in real-time with our interactive workout guidance",
     },
     {
       icon: "📊",
-      title: "Detaillierte Statistiken",
+      title: "Detailed Statistics",
       description:
-        "Verfolge deinen Fortschritt und erkenne deine Verbesserungen",
+        "Follow your progress and see your improvements",
     },
   ];
 
   // VOIX Quick Start Tools
   const handleStartTrainingPlan = async (event: Event) => {
     navigate("/trainingsplan");
-    (event.target as any).dispatchEvent(
-      new CustomEvent("return", {
-        detail: {
-          message: "Trainingsplan erfolgreich gestartet",
-          action: "start_training_plan",
-        },
-      })
-    );
+    (event.target as any).dispatchEvent(new CustomEvent('return', { 
+      detail: {
+        message: "Training plan generation started",
+        action: "start_training_plan"
+      }
+    }));
   };
 
   const handleStartLiveWorkout = async (event: Event) => {
     navigate("/live-workout");
-    (event.target as any).dispatchEvent(
-      new CustomEvent("return", {
-        detail: {
-          message: "Live Workout erfolgreich gestartet",
-          action: "start_live_workout",
-        },
-      })
-    );
+    (event.target as any).dispatchEvent(new CustomEvent('return', { 
+      detail: {
+        message: "Live workout started successfully",
+        action: "start_live_workout"
+      }
+    }));
   };
 
   const handleViewStatistics = async (event: Event) => {
     navigate("/statistiken");
-    (event.target as any).dispatchEvent(
-      new CustomEvent("return", {
-        detail: {
-          message: "Statistiken erfolgreich geöffnet",
-          action: "view_statistics",
-        },
-      })
-    );
+    (event.target as any).dispatchEvent(new CustomEvent('return', { 
+      detail: {
+        message: "Statistics opened successfully",
+        action: "view_statistics"
+      }
+    }));
   };
 
   // ...existing code...
@@ -76,116 +70,112 @@ const Home = () => {
   return (
     <>
       {/* VOIX Quick Start Tools */}
-      <Tool
-        name="start_training_plan"
-        description="Starte einen neuen Trainingsplan oder öffne bestehenden Plan"
+      <Tool 
+        name="start_training_plan" 
+        description="Start a new training plan or open an existing one"
         onCall={handleStartTrainingPlan}
         return
       />
-
-      <Tool
-        name="start_live_workout"
-        description="Starte ein Live Workout-Training"
+      
+      <Tool 
+        name="start_live_workout" 
+        description="Start a live workout session"
         onCall={handleStartLiveWorkout}
         return
       />
-
-      <Tool
-        name="view_statistics"
-        description="Öffne die Trainingsstatistiken und Fortschrittsanzeige"
+      
+      <Tool 
+        name="view_statistics" 
+        description="Open the training statistics and progress display"
         onCall={handleViewStatistics}
         return
       />
 
       {/* Context für AI */}
       <div data-context="fitness_app_home">
-        Willkommen bei Planetic Gym! Verfügbare Aktionen: Trainingsplan starten,
-        Live Workout beginnen, Statistiken anzeigen. Die App bietet
-        personalisierte Trainingspläne, interaktive Live Workouts und
-        detaillierte Fortschrittsverfolgung.
+        Welcome to Planetic Gym! Available actions: Start training plan, Begin live workout, View statistics. The app offers personalized training plans, interactive live workouts, and detailed progress tracking.
       </div>
 
       <Box>
-        {/* Hero Section */}
-        <Box
-          py={{ base: 20, md: 32 }}
-          bgGradient="linear(to-br, bg.secondary, bg.tertiary)"
-          position="relative"
-          overflow="hidden"
-        >
-          <Container maxW="7xl">
-            <Stack gap={8} textAlign="center" maxW="4xl" mx="auto">
-              <Heading
-                as="h1"
-                size="3xl"
-                fontWeight="bold"
-                color="text.primary"
-                lineHeight="1.2"
-              >
-                Willkommen bei{" "}
-                <Text as="span" color="accent.primary">
-                  Planetic Gym
-                </Text>
-              </Heading>
-
-              <Text
-                fontSize="xl"
-                color="text.secondary"
-                maxW="2xl"
-                lineHeight="1.6"
-                mx="auto"
-              >
-                Deine persönliche Fitness-Plattform für optimale
-                Trainingsergebnisse
+      {/* Hero Section */}
+      <Box
+        py={{ base: 20, md: 32 }}
+        bgGradient="linear(to-br, bg.secondary, bg.tertiary)"
+        position="relative"
+        overflow="hidden"
+      >
+        <Container maxW="7xl">
+          <Stack gap={8} textAlign="center" maxW="4xl" mx="auto">
+            <Heading
+              as="h1"
+              size="3xl"
+              fontWeight="bold"
+              color="text.primary"
+              lineHeight="1.2"
+            >
+              Welcome to{" "}
+              <Text as="span" color="accent.primary">
+                Planetic Gym
               </Text>
+            </Heading>
 
-              <Stack
-                direction={{ base: "column", sm: "row" }}
-                gap={4}
-                justify="center"
+            <Text
+              fontSize="xl"
+              color="text.secondary"
+              maxW="2xl"
+              lineHeight="1.6"
+              mx="auto"
+            >
+              Your personal fitness platform for optimal training results
+            </Text>
+
+            <Stack
+              direction={{ base: "column", sm: "row" }}
+              gap={4}
+              justify="center"
+            >
+              <Button
+                asChild
+                size="lg"
+                bg="accent.primary"
+                color="white"
+                _hover={{ bg: "accent.secondary" }}
+                px={8}
+                py={6}
+                fontSize="lg"
+                fontWeight="bold"
               >
-                <Button
-                  asChild
-                  size="lg"
-                  bg="accent.primary"
-                  color="white"
-                  _hover={{ bg: "accent.secondary" }}
-                  px={8}
-                  py={6}
-                  fontSize="lg"
-                  fontWeight="bold"
-                >
-                  <RouterLink to="/trainingsplan">
-                    Trainingsplan starten
-                  </RouterLink>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  borderColor="accent.primary"
-                  color="accent.primary"
-                  _hover={{ bg: "accent.primary", color: "white" }}
-                  px={8}
-                  py={6}
-                  fontSize="lg"
-                >
-                  <RouterLink to="/live-workout">Live Workout</RouterLink>
-                </Button>
-              </Stack>
+                <RouterLink to="/trainingsplan">
+                  Start Training 
+                </RouterLink>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                borderColor="accent.primary"
+                color="accent.primary"
+                _hover={{ bg: "accent.primary", color: "white" }}
+                px={8}
+                py={6}
+                fontSize="lg"
+              >
+                <RouterLink to="/live-workout">Live Workout</RouterLink>
+              </Button>
             </Stack>
-          </Container>
-        </Box>
+          </Stack>
+        </Container>
+      </Box>
 
-        {/* Features Section */}
-        <Box py={1} bg="bg">
-          <Container maxW="7xl">
-            <Stack gap={16}>
-              <Stack gap={4} textAlign="center">
-                <Heading size="2xl" color="text.primary">
-                  Warum Planetic Gym?
-                </Heading>
-              </Stack>
+      {/* Features Section */}
+      <Box py={1} bg="bg">
+        <Container maxW="7xl">
+          <Stack gap={16}>
+            <Stack gap={4} textAlign="center">
+              <Heading size="2xl" color="text.primary">
+                Why Planetic Gym?
+              </Heading>
+            </Stack>
 
               <Grid
                 templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}

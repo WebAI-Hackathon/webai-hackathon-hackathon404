@@ -59,7 +59,7 @@ const Statistiken = () => {
 
       const element = statisticsContentRef.current;
       if (!element) {
-        throw new Error("Statistiken-Element nicht gefunden");
+        throw new Error("Statistic element not found");
       }
 
       // HTML zu Canvas konvertieren
@@ -82,10 +82,10 @@ const Statistiken = () => {
 
       // Titel hinzufügen
       pdf.setFontSize(20);
-      pdf.text("Trainings-Statistiken", 20, 20);
+      pdf.text("Training statistics", 20, 20);
       pdf.setFontSize(12);
       pdf.text(
-        `Erstellt am: ${new Date().toLocaleDateString("de-DE")}`,
+        `Created on: ${new Date().toLocaleDateString("de-DE")}`,
         20,
         30
       );
@@ -105,14 +105,14 @@ const Statistiken = () => {
       }
 
       // PDF speichern
-      const fileName = `Trainings-Statistiken_${
+      const fileName = `Training-statistics_${
         new Date().toISOString().split("T")[0]
       }.pdf`;
       pdf.save(fileName);
 
       return fileName;
     } catch (error) {
-      console.error("PDF-Export Fehler:", error);
+      console.error("PDF-Export Error:", error);
       throw error;
     } finally {
       setExportingPDF(false);
@@ -127,7 +127,7 @@ const Statistiken = () => {
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
           detail: {
-            message: `PDF erfolgreich erstellt und heruntergeladen: ${fileName}`,
+            message: `PDF successfully created and downloaded: ${fileName}`,
             filename: fileName,
             success: true,
           },
@@ -135,7 +135,7 @@ const Statistiken = () => {
       );
     } catch (err) {
       const errorMsg =
-        err instanceof Error ? err.message : "Fehler beim PDF-Export";
+        err instanceof Error ? err.message : "Error while exporting PDF";
 
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
@@ -151,9 +151,9 @@ const Statistiken = () => {
   // Context für AI
   const statisticsContext = () => {
     if (!overallStats) {
-      return "Keine Statistiken geladen. Verwende die verfügbaren Tools um Trainingsstatistiken abzurufen.";
+      return "No statistics loaded. Use the available tools to fetch training statistics.";
     }
-    return `Aktuelle Trainingsstatistiken: ${overallStats.workout_stats.total_workouts} Workouts insgesamt, ${overallStats.extended_exercise_stats.length} verschiedene Übungen durchgeführt.`;
+    return `Current training statistics: ${overallStats.workout_stats.total_workouts} total workouts, ${overallStats.extended_exercise_stats.length} excercises executed.`;
   };
 
   // Tool: Übersicht der Trainingsstatistiken anzeigen
@@ -179,7 +179,7 @@ const Statistiken = () => {
       const errorMsg =
         err instanceof Error
           ? err.message
-          : "Fehler beim Laden der Übersichtsstatistiken";
+          : "Error while loading overall statistics";
       setError(errorMsg);
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
@@ -215,7 +215,7 @@ const Statistiken = () => {
       const errorMsg =
         err instanceof Error
           ? err.message
-          : "Fehler beim Laden der Übungsfrequenzen";
+          : "Error while loading exercise frequencies";
       setError(errorMsg);
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
@@ -245,7 +245,7 @@ const Statistiken = () => {
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
           detail: {
-            message: `Fortschrittsdiagramme für ${improvements.length} Übungen geladen`,
+            message: `Loaded progress diagrams for ${improvements.length} excercises.`,
             improvements: improvements,
           },
         })
@@ -284,7 +284,7 @@ const Statistiken = () => {
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
           detail: {
-            message: `${stats.plan_statistics.length} Trainingspläne analysiert`,
+            message: `Analyzed ${stats.plan_statistics.length} training plans.`,
             plans: planSummary,
           },
         })
@@ -293,7 +293,7 @@ const Statistiken = () => {
       const errorMsg =
         err instanceof Error
           ? err.message
-          : "Fehler beim Laden der Trainingsplan-Statistiken";
+          : "Error while loading training plan statistics";
       setError(errorMsg);
       (event.target as any).dispatchEvent(
         new CustomEvent("return", {
@@ -311,35 +311,35 @@ const Statistiken = () => {
         {/* VOIX Tools */}
         <Tool
           name="get_workout_overview"
-          description="Zeige eine Übersicht der Trainingsstatistiken mit Progress Ringen an"
+          description="Show progress rings for workout overview"
           onCall={handleGetOverviewStats}
           return
         />
 
         <Tool
           name="show_exercise_frequencies"
-          description="Zeige Übungsfrequenzen als Histogramm an"
+          description="Show exercise frequencies as histogram"
           onCall={handleGetExerciseFrequencies}
           return
         />
 
         <Tool
           name="display_progress_charts"
-          description="Zeige Fortschrittsdiagramme für Gewichtsentwicklung an"
+          description="Show weight progression charts"
           onCall={handleGetProgressCharts}
           return
         />
 
         <Tool
           name="show_plan_statistics"
-          description="Zeige Trainingsplan-Statistiken und Completion Rates an"
+          description="Show training plan statistics and completion rates"
           onCall={handleGetPlanStats}
           return
         />
 
         <Tool
           name="export_statistics_pdf"
-          description="Exportiere alle Trainingsstatistiken als PDF zum Download"
+          description="Export all training statistics as PDF for download"
           onCall={handleExportPDF}
           return
         />
@@ -351,7 +351,7 @@ const Statistiken = () => {
           <Stack gap={8}>
             <HStack justify="space-between" align="center">
               <Heading color="text.primary" textAlign="center">
-                📊 Trainings-Statistiken
+                📊 Training-statistics
               </Heading>
 
               {/* PDF Export Button */}
@@ -364,14 +364,14 @@ const Statistiken = () => {
                 size="md"
                 px={6}
               >
-                📄 {exportingPDF ? "PDF wird erstellt..." : "PDF Export"}
+                📄 {exportingPDF ? "PDF is creating..." : "PDF Export"}
               </Button>
             </HStack>
 
             {loading && (
               <Stack gap={4} textAlign="center" align="center">
                 <Spinner size="xl" color="accent.primary" />
-                <Text>Lade Statistiken...</Text>
+                <Text>Load statistics...</Text>
               </Stack>
             )}
 
@@ -385,7 +385,7 @@ const Statistiken = () => {
                 textAlign="center"
               >
                 <Text color="red.600" fontWeight="bold" mb={2}>
-                  ⚠️ Fehler beim Laden
+                  ⚠️ Error while loading:
                 </Text>
                 <Text color="red.600">{error}</Text>
               </Box>
@@ -401,19 +401,19 @@ const Statistiken = () => {
                 textAlign="center"
               >
                 <Text color="text.secondary" fontSize="lg" mb={4}>
-                  🎯 Statistiken bereit zur Anzeige
+                  🎯 Statistics ready for showing
                 </Text>
                 <Text color="text.secondary">
-                  Sage der KI, welche Statistiken du sehen möchtest:
+                  Tell the AI what statistics you want to see:
                 </Text>
                 <Box mt={4} color="text.secondary" fontSize="sm">
                   <Text>
-                    • "Zeige mir eine Übersicht meiner Trainingsstatistiken"
+                    • "Show me an overview of my training statistics"
                   </Text>
-                  <Text>• "Zeige die Häufigkeit meiner Übungen"</Text>
-                  <Text>• "Zeige meine Fortschrittsdiagramme"</Text>
+                  <Text>• "Show exercise frequencies"</Text>
+                  <Text>• "Show my progress diagrams"</Text>                    
                   <Text>
-                    • "Wie sehen meine Trainingsplan-Statistiken aus?"
+                    • "How are my training plan statistics?"
                   </Text>
                 </Box>
               </Box>
@@ -429,7 +429,7 @@ const Statistiken = () => {
                 rounded="lg"
               >
                 <Heading size="md" color="text.primary" mb={6}>
-                  📊 Performance Übersicht
+                  📊 Performance Overview
                 </Heading>
                 <Grid
                   templateColumns={{
@@ -491,7 +491,7 @@ const Statistiken = () => {
                         100
                       )}
                       color="#EF4444"
-                      label="Gesamte Sets"
+                      label="All sets"
                       value={`${overallStats.extended_exercise_stats.reduce(
                         (sum, ex) => sum + ex.total_sets,
                         0
@@ -508,7 +508,7 @@ const Statistiken = () => {
                         Math.min(100, progressData[0].overall_improvement + 50)
                       )}
                       color="#8B5CF6"
-                      label="Gewichts-entwicklung"
+                      label="Weight Progress"
                       value={`${
                         progressData[0].overall_improvement > 0 ? "+" : ""
                       }${progressData[0].overall_improvement.toFixed(1)}%`}
@@ -618,7 +618,7 @@ const Statistiken = () => {
                 rounded="lg"
               >
                 <Heading size="md" color="text.primary" mb={6}>
-                  📈 Gewichtsentwicklung
+                  📈 Weight Progress
                 </Heading>
                 <Grid
                   templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }}
@@ -644,7 +644,7 @@ const Statistiken = () => {
 
                       <HStack justify="space-between" mb={4}>
                         <Text color="text.secondary" fontSize="sm">
-                          Verbesserung:
+                          Improvement:
                           <Text
                             as="span"
                             color={
@@ -781,7 +781,7 @@ const Statistiken = () => {
 
                           <Stack direction="row" justify="space-between">
                             <Text color="text.secondary" fontSize="sm">
-                              Übungen:
+                              Excercises:
                             </Text>
                             <Text color="text.primary" fontSize="sm">
                               {plan.total_exercises}
@@ -790,7 +790,7 @@ const Statistiken = () => {
 
                           <Stack direction="row" justify="space-between">
                             <Text color="text.secondary" fontSize="sm">
-                              Vollständigkeit:
+                              Completeness:
                             </Text>
                             <Text
                               color={
