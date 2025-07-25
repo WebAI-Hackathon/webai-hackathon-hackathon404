@@ -13,10 +13,31 @@ import {
   Input,
   Textarea,
   Spinner,
+  IconButton,
+  MenuTrigger,
+  MenuRoot,
+  MenuContent,
+  MenuItem,
 } from "@chakra-ui/react";
+import {
+  FaDumbbell,
+  FaPlay,
+  FaEdit,
+  FaFilePdf,
+  FaPlus,
+  FaTrash,
+  FaCog,
+  FaFire,
+  FaTint,
+  FaBed,
+  FaClipboardList,
+  FaCheckCircle,
+  FaTimes,
+} from "react-icons/fa";
 import { Tool } from "../components/Tool";
 import { apiService } from "../services/api";
 import type { WorkingPlan } from "../services/api";
+import jsPDF from "jspdf";
 
 // Frontend Types (für Kompatibilität mit der bestehenden UI)
 interface FrontendExercise {
@@ -45,8 +66,10 @@ const Trainingsplan = () => {
   const [showNewWeekDialog, setShowNewWeekDialog] = useState(false);
   const [showNewDayDialog, setShowNewDayDialog] = useState(false);
   const [showEditDayDialog, setShowEditDayDialog] = useState(false);
+  const [showEditWeekDialog, setShowEditWeekDialog] = useState(false);
   const [currentWeekId, setCurrentWeekId] = useState<string>("");
   const [editingDay, setEditingDay] = useState<TrainingDay | null>(null);
+  const [editingWeek, setEditingWeek] = useState<TrainingWeek | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newWeekData, setNewWeekData] = useState({
@@ -104,6 +127,141 @@ const Trainingsplan = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // PDF Export Funktion
+  const exportDayToPDF = (day: TrainingDay, weekName: string) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.text("Planetic Gym", 20, 20);
+
+    doc.setFontSize(16);
+    doc.text("Training Plan Export", 20, 35);
+
+    // Trainingswoche und Tag
+    doc.setFontSize(14);
+    doc.text(`Training Week: ${weekName}`, 20, 50);
+    doc.text(`Training Day: ${day.name}`, 20, 60);
+    doc.text(`Focus: ${day.focus}`, 20, 70);
+
+    // Datum
+    const today = new Date().toLocaleDateString("en-US");
+    doc.setFontSize(10);
+    doc.text(`Created on: ${today}`, 20, 80);
+
+    // Linie
+    doc.line(20, 85, 190, 85);
+
+    // Übungen Überschrift
+    doc.setFontSize(14);
+    doc.text("Exercises:", 20, 100);
+
+    let yPosition = 115;
+
+    if (day.exercises.length === 0) {
+      doc.setFontSize(12);
+      doc.text("No exercises defined for this day.", 20, yPosition);
+    } else {
+      // Tabellen-Header
+      doc.setFontSize(10);
+      doc.text("No.", 20, yPosition);
+      doc.text("Exercise", 35, yPosition);
+      doc.text("Repetitions", 120, yPosition);
+      doc.text("Weight (kg)", 160, yPosition);
+
+      // Linie unter Header
+      doc.line(20, yPosition + 2, 190, yPosition + 2);
+      yPosition += 10;
+
+      // Übungen
+      day.exercises.forEach((exercise, index) => {
+        if (yPosition > 270) {
+          // Neue Seite wenn nötig
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.text(`${index + 1}.`, 20, yPosition);
+
+        // Übungsname (mit Zeilenumbruch wenn zu lang)
+        const exerciseName = exercise.name || "Unnamed Exercise";
+        if (exerciseName.length > 35) {
+          const words = exerciseName.split(" ");
+          let line = "";
+          let lineY = yPosition;
+
+          words.forEach((word, wordIndex) => {
+            const testLine = line + word + " ";
+            if (testLine.length > 35 && line !== "") {
+              doc.text(line.trim(), 35, lineY);
+              line = word + " ";
+              lineY += 5;
+            } else {
+              line = testLine;
+            }
+
+            if (wordIndex === words.length - 1) {
+              doc.text(line.trim(), 35, lineY);
+            }
+          });
+          yPosition = lineY;
+        } else {
+          doc.text(exerciseName, 35, yPosition);
+        }
+
+        doc.text(`${exercise.repetitions}x`, 120, yPosition);
+        doc.text(
+          exercise.weight > 0 ? `${exercise.weight}` : "-",
+          160,
+          yPosition
+        );
+
+        yPosition += 15;
+      });
+
+      // Statistiken
+      yPosition += 10;
+      doc.line(20, yPosition, 190, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(12);
+      doc.text("Summary:", 20, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.text(`Number of exercises: ${day.exercises.length}`, 20, yPosition);
+      yPosition += 8;
+
+      const totalReps = day.exercises.reduce(
+        (sum, ex) => sum + ex.repetitions,
+        0
+      );
+      doc.text(`Total repetitions: ${totalReps}`, 20, yPosition);
+      yPosition += 8;
+
+      const totalWeight = day.exercises.reduce(
+        (sum, ex) => sum + ex.weight * ex.repetitions,
+        0
+      );
+      if (totalWeight > 0) {
+        doc.text(`Total volume: ${totalWeight.toFixed(1)} kg`, 20, yPosition);
+      }
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.text(
+      "Generated by Planetic Gym - Your digital training companion",
+      20,
+      285
+    );
+
+    // PDF speichern
+    const fileName = `${weekName}_${day.name}_${today.replace(/\//g, "-")}.pdf`;
+    doc.save(fileName);
   };
 
   // Daten vom Backend laden
@@ -192,6 +350,47 @@ const Trainingsplan = () => {
       exercises: [...day.exercises],
     });
     setShowEditDayDialog(true);
+  };
+
+  const editWeek = (week: TrainingWeek) => {
+    setEditingWeek(week);
+    setNewWeekData({
+      name: week.name,
+      description: week.description,
+    });
+    setShowEditWeekDialog(true);
+  };
+
+  const updateWeek = async () => {
+    if (!editingWeek) return;
+
+    try {
+      await apiService.updateWorkingPlan(parseInt(editingWeek.id), {
+        title: newWeekData.name || editingWeek.name,
+        description: newWeekData.description || editingWeek.description,
+      });
+
+      setShowEditWeekDialog(false);
+      setEditingWeek(null);
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error updating week:", error);
+      setError("Fehler beim Aktualisieren der Trainingswoche");
+    }
+  };
+
+  const deleteWeek = async (weekId: string) => {
+    try {
+      const weekIdNum = parseInt(weekId);
+      if (!isNaN(weekIdNum)) {
+        await apiService.deleteWorkingPlan(weekIdNum);
+        await refreshData();
+      }
+    } catch (error) {
+      console.error("Error deleting week:", error);
+      setError("Fehler beim Löschen der Trainingswoche");
+    }
   };
 
   const updateDay = async () => {
@@ -524,6 +723,29 @@ const Trainingsplan = () => {
     window.location.href = `/live-workout?dayId=${details.dayId}`;
   };
 
+  const handleEditWeek = async (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    try {
+      // Update WorkingPlan im Backend
+      const weekUpdateData: any = {};
+      if (details.name) weekUpdateData.title = details.name;
+      if (details.description) weekUpdateData.description = details.description;
+
+      if (Object.keys(weekUpdateData).length > 0) {
+        await apiService.updateWorkingPlan(
+          parseInt(details.weekId),
+          weekUpdateData
+        );
+      }
+
+      // Lade Daten neu, um die aktuellste Version zu bekommen
+      await refreshData();
+    } catch (error) {
+      console.error("Error updating week:", error);
+      setError("Fehler beim Aktualisieren der Trainingswoche");
+    }
+  };
+
   return (
     <Box py={8}>
       {/* VOIX Context Elements */}
@@ -786,19 +1008,45 @@ const Trainingsplan = () => {
   />
 </Tool>
 
-<Tool
-  name="delete_training_week"
-  description="Deletes a training week"
-  onCall={handleDeleteWeek}
->
-  {/* @ts-ignore */}
-  <prop
-    name="weekId"
-    type="string"
-    required
-    description="ID of the training week to be deleted"
-  />
-</Tool>
+      <Tool
+        name="delete_training_week"
+        description="Löscht eine Trainingswoche"
+        onCall={handleDeleteWeek}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID der zu löschenden Trainingswoche"
+        />
+      </Tool>
+
+      <Tool
+        name="edit_training_week"
+        description="Bearbeitet eine bestehende Trainingswoche"
+        onCall={handleEditWeek}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="weekId"
+          type="string"
+          required
+          description="ID der zu bearbeitenden Trainingswoche"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="name"
+          type="string"
+          description="Neuer Name der Trainingswoche"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="description"
+          type="string"
+          description="Neue Beschreibung der Trainingswoche"
+        />
+      </Tool>
 
 <Tool
   name="start_workout"
@@ -816,17 +1064,24 @@ const Trainingsplan = () => {
 
       <Container maxW="6xl">
         <Stack gap={4} textAlign="center" mb={12}>
-          <Heading size="2xl" color="text.primary">
-            📋 Your Training Plans
-          </Heading>
+          <Flex align="center" justify="center" gap={3}>
+            <FaClipboardList size="2rem" color="var(--colors-accent-primary)" />
+            <Heading size="2xl" color="text.primary">
+              Deine Trainingspläne
+            </Heading>
+          </Flex>
           <Text fontSize="lg" color="text.secondary">
             Manage your training weeks and days (Data from database)
           </Text>
           {trainingWeeks.length > 0 && (
-            <Text fontSize="sm" color="green.600">
-              ✅ {trainingWeeks.length} Training plan
-              {trainingWeeks.length !== 1 ? "s" : ""} loaded from database
-            </Text>
+            <Flex align="center" justify="center" gap={2}>
+              <FaCheckCircle color="green" />
+              <Text fontSize="sm" color="green.600">
+                {trainingWeeks.length} Trainingsplan
+                {trainingWeeks.length !== 1 ? "e" : ""} aus der Datenbank
+                geladen
+              </Text>
+            </Flex>
           )}
         </Stack>
 
@@ -854,7 +1109,10 @@ const Trainingsplan = () => {
             px={8}
             loading={isLoading}
           >
-            ➕ Add New Training Week
+            <Flex align="center" gap={2}>
+              <FaPlus />
+              <Text>Neue Woche</Text>
+            </Flex>
           </Button>
         </Flex>
 
@@ -866,21 +1124,28 @@ const Trainingsplan = () => {
         ) : trainingWeeks.length === 0 ? (
           /* Empty State - Keine Daten in der Datenbank */
           <Box textAlign="center" py={12}>
-            <Text fontSize="xl" color="text.secondary" mb={4}>
-              🏋️‍♂️ No training plans found in the database
-            </Text>
-            <Text color="text.secondary" mb={6}>
-              Create your first training plan to save it in the database!
-            </Text>
-            <Button
-              onClick={addNewWeek}
-              bg="accent.primary"
-              color="white"
-              _hover={{ bg: "accent.secondary" }}
-              size="lg"
-            >
-              ➕ Create First Training Plan
-            </Button>
+            <Flex direction="column" align="center" gap={4}>
+              <FaDumbbell size="4rem" color="var(--colors-text-secondary)" />
+              <Text fontSize="xl" color="text.secondary">
+                Keine Trainingspläne in der Datenbank gefunden
+              </Text>
+              <Text color="text.secondary">
+                Erstelle deinen ersten Trainingsplan, um ihn in der Datenbank zu
+                speichern!
+              </Text>
+              <Button
+                onClick={addNewWeek}
+                bg="accent.primary"
+                color="white"
+                _hover={{ bg: "accent.secondary" }}
+                size="lg"
+              >
+                <Flex align="center" gap={2}>
+                  <FaPlus />
+                  <Text>Ersten Plan erstellen</Text>
+                </Flex>
+              </Button>
+            </Flex>
           </Box>
         ) : (
           /* Training Plans aus der Datenbank */
@@ -895,15 +1160,49 @@ const Trainingsplan = () => {
                       </Heading>
                       <Text color="text.secondary">{week.description}</Text>
                     </Stack>
-                    <Button
-                      onClick={() => addNewDay(week.id)}
-                      bg="accent.primary"
-                      color="white"
-                      _hover={{ bg: "accent.secondary" }}
-                      size="sm"
-                    >
-                      ➕ Add Day
-                    </Button>
+                    <Flex gap={2} align="center">
+                      <MenuRoot>
+                        <MenuTrigger asChild>
+                          <IconButton
+                            variant="ghost"
+                            size="sm"
+                            aria-label="Trainingsplan bearbeiten"
+                          >
+                            <FaCog />
+                          </IconButton>
+                        </MenuTrigger>
+                        <MenuContent>
+                          <MenuItem value="edit" onClick={() => editWeek(week)}>
+                            <Flex align="center" gap={2}>
+                              <FaEdit />
+                              <Text>Bearbeiten</Text>
+                            </Flex>
+                          </MenuItem>
+                          <MenuItem
+                            value="delete"
+                            onClick={() => deleteWeek(week.id)}
+                            color="red.600"
+                          >
+                            <Flex align="center" gap={2}>
+                              <FaTrash />
+                              <Text>Löschen</Text>
+                            </Flex>
+                          </MenuItem>
+                        </MenuContent>
+                      </MenuRoot>
+                      <Button
+                        onClick={() => addNewDay(week.id)}
+                        bg="accent.primary"
+                        color="white"
+                        _hover={{ bg: "accent.secondary" }}
+                        size="sm"
+                      >
+                        <Flex align="center" gap={1}>
+                          <FaPlus size="0.8rem" />
+                          <Text>Tag</Text>
+                        </Flex>
+                      </Button>
+                    </Flex>
                   </Flex>
 
                   {week.days.length > 0 ? (
@@ -990,7 +1289,23 @@ const Trainingsplan = () => {
                                     window.location.href = `/live-workout?dayId=${day.id}`;
                                   }}
                                 >
-                                  🏃‍♂️ Start Workout
+                                  <Flex align="center" gap={1}>
+                                    <FaPlay size="0.8rem" />
+                                    <Text fontSize="xs">Start</Text>
+                                  </Flex>
+                                </Button>
+                                <Button
+                                  bg="blue.500"
+                                  color="white"
+                                  _hover={{ bg: "blue.600" }}
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    exportDayToPDF(day, week.name);
+                                  }}
+                                  title="Als PDF exportieren"
+                                >
+                                  <FaFilePdf size="0.8rem" />
                                 </Button>
                                 <Button
                                   bg="gray.500"
@@ -1002,7 +1317,7 @@ const Trainingsplan = () => {
                                     editDay(day);
                                   }}
                                 >
-                                  ✏️ Edit
+                                  <FaEdit size="0.8rem" />
                                 </Button>
                               </Flex>
                             </Stack>
@@ -1032,9 +1347,12 @@ const Trainingsplan = () => {
             ))}
 
             <Box mt={12} p={6} bg="bg.secondary" borderRadius="lg">
-              <Heading size="md" color="text.primary" mb={4} textAlign="center">
-                💡 Training Tips
-              </Heading>
+              <Flex align="center" justify="center" gap={2} mb={4}>
+                <FaFire color="var(--colors-accent-primary)" />
+                <Heading size="md" color="text.primary">
+                  Trainingstipps
+                </Heading>
+              </Flex>
               <Grid
                 templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
                 gap={4}
@@ -1045,9 +1363,9 @@ const Trainingsplan = () => {
                   bg="bg.tertiary"
                   borderRadius="md"
                 >
-                  <Text fontSize="2xl" mb={2}>
-                    🔥
-                  </Text>
+                  <Flex justify="center" mb={2}>
+                    <FaFire size="2rem" color="var(--colors-accent-primary)" />
+                  </Flex>
                   <Text
                     fontSize="sm"
                     fontWeight="bold"
@@ -1066,9 +1384,9 @@ const Trainingsplan = () => {
                   bg="bg.tertiary"
                   borderRadius="md"
                 >
-                  <Text fontSize="2xl" mb={2}>
-                    💧
-                  </Text>
+                  <Flex justify="center" mb={2}>
+                    <FaTint size="2rem" color="var(--colors-blue-500)" />
+                  </Flex>
                   <Text
                     fontSize="sm"
                     fontWeight="bold"
@@ -1087,9 +1405,9 @@ const Trainingsplan = () => {
                   bg="bg.tertiary"
                   borderRadius="md"
                 >
-                  <Text fontSize="2xl" mb={2}>
-                    😴
-                  </Text>
+                  <Flex justify="center" mb={2}>
+                    <FaBed size="2rem" color="var(--colors-purple-500)" />
+                  </Flex>
                   <Text
                     fontSize="sm"
                     fontWeight="bold"
@@ -1124,7 +1442,7 @@ const Trainingsplan = () => {
             <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
               <Stack gap={4}>
                 <Heading size="md" color="text.primary">
-                  Create New Training Week
+                  Neue Trainingswoche erstellen
                 </Heading>
 
                 <Stack gap={3}>
@@ -1135,14 +1453,14 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Week Name:
+                      Name der Woche:
                     </Text>
                     <Input
                       value={newWeekData.name}
                       onChange={(e) =>
                         setNewWeekData({ ...newWeekData, name: e.target.value })
                       }
-                      placeholder="e.g. Strength Week 1"
+                      placeholder="z.B. Kraft Woche 1"
                     />
                   </Box>
 
@@ -1153,7 +1471,7 @@ const Trainingsplan = () => {
                       color="text.primary"
                       mb={1}
                     >
-                      Description:
+                      Beschreibung:
                     </Text>
                     <Textarea
                       value={newWeekData.description}
@@ -1163,27 +1481,117 @@ const Trainingsplan = () => {
                           description: e.target.value,
                         })
                       }
-                      placeholder="Description of the training week..."
+                      placeholder="Beschreibung der Trainingswoche..."
                     />
                   </Box>
                 </Stack>
 
                 <Flex gap={3} justify="end">
                   <Button
-                    onClick={() => setShowNewWeekDialog(false)}
+                    onClick={() => {
+                      setShowEditWeekDialog(false);
+                      setEditingWeek(null);
+                    }}
                     bg="gray.500"
                     color="white"
                     _hover={{ bg: "gray.600" }}
                   >
-                    Cancel
+                    Abbrechen
                   </Button>
                   <Button
-                    onClick={createNewWeek}
+                    onClick={updateWeek}
                     bg="accent.primary"
                     color="white"
                     _hover={{ bg: "accent.secondary" }}
                   >
-                    Create
+                    Erstellen
+                  </Button>
+                </Flex>
+              </Stack>
+            </Box>
+          </Box>
+        )}
+
+        {/* Dialog für Trainingswoche bearbeiten */}
+        {showEditWeekDialog && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            right="0"
+            bottom="0"
+            bg="blackAlpha.600"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="1000"
+          >
+            <Box bg="bg.secondary" p={6} borderRadius="lg" maxW="md" w="90%">
+              <Stack gap={4}>
+                <Heading size="md" color="text.primary">
+                  Trainingswoche bearbeiten
+                </Heading>
+
+                <Stack gap={3}>
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Name der Woche:
+                    </Text>
+                    <Input
+                      value={newWeekData.name}
+                      onChange={(e) =>
+                        setNewWeekData({ ...newWeekData, name: e.target.value })
+                      }
+                      placeholder="z.B. Kraft Woche 1"
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color="text.primary"
+                      mb={1}
+                    >
+                      Beschreibung:
+                    </Text>
+                    <Textarea
+                      value={newWeekData.description}
+                      onChange={(e) =>
+                        setNewWeekData({
+                          ...newWeekData,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Beschreibung der Trainingswoche..."
+                    />
+                  </Box>
+                </Stack>
+
+                <Flex gap={3} justify="end">
+                  <Button
+                    onClick={() => {
+                      setShowEditWeekDialog(false);
+                      setEditingWeek(null);
+                    }}
+                    bg="gray.500"
+                    color="white"
+                    _hover={{ bg: "gray.600" }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button
+                    onClick={updateWeek}
+                    bg="accent.primary"
+                    color="white"
+                    _hover={{ bg: "accent.secondary" }}
+                  >
+                    Speichern
                   </Button>
                 </Flex>
               </Stack>
@@ -1347,7 +1755,7 @@ const Trainingsplan = () => {
                                   });
                                 }}
                               >
-                                ✕
+                                <FaTimes />
                               </Button>
                             )}
                           </Flex>
@@ -1368,7 +1776,10 @@ const Trainingsplan = () => {
                           });
                         }}
                       >
-                        ➕ Add Exercise
+                        <Flex align="center" gap={1}>
+                          <FaPlus size="0.8rem" />
+                          <Text>Übung hinzufügen</Text>
+                        </Flex>
                       </Button>
                     </Stack>
                   </Box>
@@ -1561,7 +1972,7 @@ const Trainingsplan = () => {
                                   });
                                 }}
                               >
-                                ✕
+                                <FaTimes />
                               </Button>
                             )}
                           </Flex>
@@ -1582,7 +1993,10 @@ const Trainingsplan = () => {
                           });
                         }}
                       >
-                        ➕ Übung hinzufügen
+                        <Flex align="center" gap={1}>
+                          <FaPlus size="0.8rem" />
+                          <Text>Übung hinzufügen</Text>
+                        </Flex>
                       </Button>
                     </Stack>
                   </Box>

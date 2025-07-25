@@ -147,3 +147,4 @@ backend/__pycache__/schemas.cpython-313.pyc
 package.json
 backend/routers/__pycache__/training.cpython-313.pyc
 backend/trainings.db
+backend/__pycache__/statistics_service.cpython-313.pyc
