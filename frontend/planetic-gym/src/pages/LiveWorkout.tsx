@@ -62,6 +62,8 @@ const LiveWorkout = () => {
   const [currentExercise, setCurrentExercise] = useState(0);
   const [pauseTimer, setPauseTimer] = useState(0);
   const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+  const [isPauseInputModalOpen, setIsPauseInputModalOpen] = useState(false);
+  const [customPauseTime, setCustomPauseTime] = useState("30");
   const [exerciseSets, setExerciseSets] = useState<{
     [key: number]: Array<{ reps: number; weight: number }>;
   }>({});
@@ -1940,15 +1942,7 @@ const LiveWorkout = () => {
                           color="white"
                           _hover={{ bg: "yellow.600" }}
                           px={6}
-                          onClick={() => {
-                            const pauseTime = prompt(
-                              "Pause time in seconds:",
-                              "30"
-                            );
-                            if (pauseTime) {
-                              pauseWorkout(Number(pauseTime));
-                            }
-                          }}
+                          onClick={() => setIsPauseInputModalOpen(true)}
                         >
                           <Flex align="center" gap={2}>
                             <FaPause />
@@ -2580,6 +2574,142 @@ const LiveWorkout = () => {
                     End Pause
                   </Flex>
                 </Button>
+              </Stack>
+            </Box>
+          </Box>
+        )}
+
+        {/* Pause Time Input Modal */}
+        {isPauseInputModalOpen && (
+          <Box
+            position="fixed"
+            top="0"
+            left="0"
+            width="100vw"
+            height="100vh"
+            bg="rgba(0, 0, 0, 0.8)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex="9999"
+            p={4}
+          >
+            <Box
+              bg="bg.secondary"
+              p={8}
+              rounded="lg"
+              borderColor="accent.primary"
+              borderWidth="2px"
+              textAlign="center"
+              minW="400px"
+              maxW="500px"
+              w="full"
+            >
+              <Stack gap={6}>
+                {/* Modal Header */}
+                <Stack direction="row" justify="space-between" align="center">
+                  <Heading size="lg" color="text.primary">
+                    <Flex align="center" gap={2}>
+                      <FaPause />
+                      Set Pause Time
+                    </Flex>
+                  </Heading>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsPauseInputModalOpen(false)}
+                    bg="orange.500"
+                    color="black"
+                    _hover={{ bg: "orange.600", color: "black" }}
+                    borderRadius="md"
+                    fontWeight="bold"
+                  >
+                    <FaTimes />
+                  </Button>
+                </Stack>
+
+                <Text color="text.secondary" fontSize="sm">
+                  Choose how long you want to pause your workout
+                </Text>
+
+                {/* Quick Select Buttons */}
+                <Stack gap={3}>
+                  <Text color="text.primary" fontSize="sm" fontWeight="bold">
+                    Quick Select:
+                  </Text>
+                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                    {[30, 60, 90, 120, 180, 300].map((seconds) => (
+                      <Button
+                        key={seconds}
+                        size="md"
+                        bg="bg.tertiary"
+                        color="text.primary"
+                        borderColor="border"
+                        borderWidth="1px"
+                        _hover={{
+                          bg: "accent.primary",
+                          color: "white",
+                          borderColor: "accent.primary",
+                        }}
+                        onClick={() => {
+                          pauseWorkout(seconds);
+                          setIsPauseInputModalOpen(false);
+                        }}
+                      >
+                        {seconds < 60 ? `${seconds}s` : `${seconds / 60}min`}
+                      </Button>
+                    ))}
+                  </Grid>
+                </Stack>
+
+                {/* Custom Time Input */}
+                <Stack gap={3}>
+                  <Text color="text.primary" fontSize="sm" fontWeight="bold">
+                    Custom Time:
+                  </Text>
+                  <Stack direction="row" gap={3} align="center">
+                    <Input
+                      value={customPauseTime}
+                      onChange={(e) => setCustomPauseTime(e.target.value)}
+                      placeholder="30"
+                      type="number"
+                      min="1"
+                      max="3600"
+                      textAlign="center"
+                      fontSize="lg"
+                      fontWeight="bold"
+                      bg="bg.tertiary"
+                      borderColor="border"
+                      _focus={{
+                        borderColor: "accent.primary",
+                        boxShadow:
+                          "0 0 0 1px var(--chakra-colors-accent-primary)",
+                      }}
+                    />
+                    <Text color="text.secondary" fontSize="sm">
+                      seconds
+                    </Text>
+                  </Stack>
+                  <Button
+                    size="lg"
+                    bg="accent.primary"
+                    color="white"
+                    _hover={{ bg: "accent.secondary" }}
+                    px={8}
+                    onClick={() => {
+                      const seconds = Number(customPauseTime);
+                      if (seconds > 0) {
+                        pauseWorkout(seconds);
+                        setIsPauseInputModalOpen(false);
+                      }
+                    }}
+                    disabled={!customPauseTime || Number(customPauseTime) <= 0}
+                  >
+                    <Flex align="center" gap={2}>
+                      Start Pause
+                    </Flex>
+                  </Button>
+                </Stack>
               </Stack>
             </Box>
           </Box>
