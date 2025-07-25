@@ -70,6 +70,15 @@ const LiveWorkout = () => {
   const [tempWeight, setTempWeight] = useState(0);
   const [tempReps, setTempReps] = useState(0);
 
+  // Exercise Management State
+  const [isManageExercisesOpen, setIsManageExercisesOpen] = useState(false);
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+  const [isAddingExercise, setIsAddingExercise] = useState(false);
+  const [newExerciseTitle, setNewExerciseTitle] = useState("");
+  const [newExerciseDescription, setNewExerciseDescription] = useState("");
+  const [newExerciseWeight, setNewExerciseWeight] = useState(0);
+  const [newExerciseReps, setNewExerciseReps] = useState(10);
+
   // Helper functions
   const convertBackendToFrontend = (
     exercises: Exercise[]
@@ -82,10 +91,171 @@ const LiveWorkout = () => {
     }));
   };
 
+  // Exercise Management Functions
+  const loadAllExercises = async () => {
+    try {
+      const exercises = await apiService.getExercises();
+      setAllExercises(exercises);
+    } catch (err) {
+      console.error("Error loading exercises:", err);
+      setError("Fehler beim Laden der Übungen");
+    }
+  };
+
+  const createNewExercise = async () => {
+    if (!newExerciseTitle.trim()) {
+      setError("Übungsname ist erforderlich");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const newExercise = await apiService.createExercise({
+        title: newExerciseTitle,
+        description: newExerciseDescription || undefined,
+        first_set_weight: newExerciseWeight,
+        first_set_reps: newExerciseReps,
+      });
+
+      // Update all exercises list
+      await loadAllExercises();
+
+      // Reset form
+      setNewExerciseTitle("");
+      setNewExerciseDescription("");
+      setNewExerciseWeight(0);
+      setNewExerciseReps(10);
+      setIsAddingExercise(false);
+
+      alert(`Neue Übung "${newExercise.title}" wurde erstellt!`);
+    } catch (err) {
+      console.error("Error creating exercise:", err);
+      setError("Fehler beim Erstellen der Übung");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addExerciseToWorkingDay = async (exerciseId: number) => {
+    if (!workingDay?.id) {
+      setError("Kein Training geladen");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const updatedDay = await apiService.addExercisesToDay(workingDay.id, [exerciseId]);
+      
+      // Update working day and exercises
+      setWorkingDay(updatedDay);
+      const frontendExercises = convertBackendToFrontend(updatedDay.exercises);
+      setExercises(frontendExercises);
+      
+      // Update all exercises list to reflect any changes
+      await loadAllExercises();
+
+      const addedExercise = allExercises.find(ex => ex.id === exerciseId);
+      alert(`Übung "${addedExercise?.title || 'Unbekannt'}" wurde zum Training hinzugefügt!`);
+    } catch (err) {
+      console.error("Error adding exercise to day:", err);
+      setError("Fehler beim Hinzufügen der Übung");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeExerciseFromWorkingDay = async (exerciseId: number) => {
+    if (!workingDay?.id) {
+      setError("Kein Training geladen");
+      return;
+    }
+
+    const exerciseToRemove = exercises.find(ex => ex.id === exerciseId);
+    const confirmRemove = window.confirm(
+      `Möchten Sie die Übung "${exerciseToRemove?.name || 'Unbekannt'}" aus dem Training entfernen?`
+    );
+
+    if (!confirmRemove) return;
+
+    try {
+      setIsLoading(true);
+      const updatedDay = await apiService.removeExercisesFromDay(workingDay.id, [exerciseId]);
+      
+      // Update working day and exercises
+      setWorkingDay(updatedDay);
+      const frontendExercises = convertBackendToFrontend(updatedDay.exercises);
+      setExercises(frontendExercises);
+
+      // If we removed the current exercise, adjust currentExercise index
+      const removedExerciseIndex = exercises.findIndex(ex => ex.id === exerciseId);
+      if (removedExerciseIndex === currentExercise && currentExercise > 0) {
+        setCurrentExercise(currentExercise - 1);
+      } else if (removedExerciseIndex < currentExercise) {
+        setCurrentExercise(currentExercise - 1);
+      }
+
+      // Clear sets for the removed exercise
+      const newSets = { ...exerciseSets };
+      delete newSets[removedExerciseIndex];
+      setExerciseSets(newSets);
+
+      // Remove from completed exercises
+      const newCompleted = new Set(completedExercises);
+      newCompleted.delete(removedExerciseIndex);
+      setCompletedExercises(newCompleted);
+
+      alert(`Übung "${exerciseToRemove?.name || 'Unbekannt'}" wurde entfernt!`);
+    } catch (err) {
+      console.error("Error removing exercise from day:", err);
+      setError("Fehler beim Entfernen der Übung");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const replaceExerciseInWorkingDay = async (oldExerciseId: number, newExerciseId: number) => {
+    if (!workingDay?.id) {
+      setError("Kein Training geladen");
+      return;
+    }
+
+    const oldExercise = exercises.find(ex => ex.id === oldExerciseId);
+    const newExercise = allExercises.find(ex => ex.id === newExerciseId);
+    
+    const confirmReplace = window.confirm(
+      `Möchten Sie "${oldExercise?.name || 'Übung'}" durch "${newExercise?.title || 'neue Übung'}" ersetzen?`
+    );
+
+    if (!confirmReplace) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Remove old exercise and add new one
+      await apiService.removeExercisesFromDay(workingDay.id, [oldExerciseId]);
+      const updatedDay = await apiService.addExercisesToDay(workingDay.id, [newExerciseId]);
+      
+      // Update working day and exercises
+      setWorkingDay(updatedDay);
+      const frontendExercises = convertBackendToFrontend(updatedDay.exercises);
+      setExercises(frontendExercises);
+
+      alert(`Übung "${oldExercise?.name || 'Übung'}" wurde durch "${newExercise?.title || 'neue Übung'}" ersetzt!`);
+    } catch (err) {
+      console.error("Error replacing exercise:", err);
+      setError("Fehler beim Ersetzen der Übung");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Load workout from database if dayId is provided
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const dayId = urlParams.get("dayId");
+
+    // Always load all exercises for exercise management
+    loadAllExercises();
 
     if (dayId) {
       loadWorkingDay(parseInt(dayId));
@@ -602,6 +772,74 @@ const LiveWorkout = () => {
     }
   };
 
+  // Exercise Management VOIX Handlers
+  const handleCreateExercise = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { title, description, weight, reps } = details;
+    console.log("VOIX: Creating new exercise", title);
+    
+    setNewExerciseTitle(title || "");
+    setNewExerciseDescription(description || "");
+    setNewExerciseWeight(weight || 0);
+    setNewExerciseReps(reps || 10);
+    setIsAddingExercise(true);
+    setIsManageExercisesOpen(true);
+  };
+
+  const handleAddExerciseToDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseName } = details;
+    console.log("VOIX: Adding exercise to day", exerciseName);
+    
+    // Finde die Übung in allExercises
+    const exercise = allExercises.find(ex => 
+      ex.title.toLowerCase().includes(exerciseName.toLowerCase()) ||
+      exerciseName.toLowerCase().includes(ex.title.toLowerCase())
+    );
+    
+    if (exercise?.id) {
+      addExerciseToWorkingDay(exercise.id);
+    }
+  };
+
+  const handleRemoveExerciseFromDay = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { exerciseName } = details;
+    console.log("VOIX: Removing exercise from day", exerciseName);
+    
+    // Finde die Übung in den aktuellen Übungen
+    const exercise = exercises.find(ex => 
+      ex.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
+      exerciseName.toLowerCase().includes(ex.name.toLowerCase())
+    );
+    
+    if (exercise?.id) {
+      removeExerciseFromWorkingDay(exercise.id);
+    }
+  };
+
+  const handleReplaceExercise = (event: Event) => {
+    const details = (event as CustomEvent).detail;
+    const { oldExerciseName, newExerciseName } = details;
+    console.log("VOIX: Replacing exercise", oldExerciseName, "with", newExerciseName);
+    
+    // Finde die alte Übung
+    const oldExercise = exercises.find(ex => 
+      ex.name.toLowerCase().includes(oldExerciseName.toLowerCase()) ||
+      oldExerciseName.toLowerCase().includes(ex.name.toLowerCase())
+    );
+    
+    // Finde die neue Übung
+    const newExercise = allExercises.find(ex => 
+      ex.title.toLowerCase().includes(newExerciseName.toLowerCase()) ||
+      newExerciseName.toLowerCase().includes(ex.title.toLowerCase())
+    );
+    
+    if (oldExercise?.id && newExercise?.id) {
+      replaceExerciseInWorkingDay(oldExercise.id, newExercise.id);
+    }
+  };
+
   return (
     <Box py={8}>
       {/* VOIX Context Elements */}
@@ -651,6 +889,16 @@ const LiveWorkout = () => {
         {exerciseSets[currentExercise]
           ? JSON.stringify(exerciseSets[currentExercise])
           : "keine Sets"}
+        {/* @ts-ignore */}
+      </context>
+
+      {/* @ts-ignore */}
+      <context name="exerciseManagement">
+        Exercise Management ist verfügbar: {workingDay ? "Ja" : "Nein"}. 
+        Verfügbare Übungen zum Hinzufügen: {allExercises.filter(ex => !exercises.some(currentEx => currentEx.id === ex.id)).length}.
+        Aktuelle Übungen im Training: {exercises.length}.
+        Management Panel geöffnet: {isManageExercisesOpen ? "Ja" : "Nein"}.
+        Alle verfügbaren Übungen: {JSON.stringify(allExercises.map(ex => ({id: ex.id, title: ex.title})))}.
         {/* @ts-ignore */}
       </context>
 
@@ -925,6 +1173,88 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name oder Teil des Namens der Übung (z.B. 'squats', 'push-ups')"
+        />
+      </Tool>
+
+      {/* Exercise Management Tools */}
+      <Tool
+        name="create_exercise"
+        description="Erstellt eine neue Übung"
+        onCall={handleCreateExercise}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="title"
+          type="string"
+          required
+          description="Name der neuen Übung"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="description"
+          type="string"
+          description="Beschreibung der Übung (optional)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="weight"
+          type="number"
+          description="Standard-Gewicht in kg (optional, Standard: 0)"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="reps"
+          type="number"
+          description="Standard-Wiederholungen (optional, Standard: 10)"
+        />
+      </Tool>
+
+      <Tool
+        name="add_exercise_to_day"
+        description="Fügt eine bestehende Übung zum aktuellen Training hinzu"
+        onCall={handleAddExerciseToDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseName"
+          type="string"
+          required
+          description="Name oder Teil des Namens der Übung die hinzugefügt werden soll"
+        />
+      </Tool>
+
+      <Tool
+        name="remove_exercise_from_day"
+        description="Entfernt eine Übung aus dem aktuellen Training"
+        onCall={handleRemoveExerciseFromDay}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="exerciseName"
+          type="string"
+          required
+          description="Name oder Teil des Namens der Übung die entfernt werden soll"
+        />
+      </Tool>
+
+      <Tool
+        name="replace_exercise"
+        description="Ersetzt eine Übung im Training durch eine andere"
+        onCall={handleReplaceExercise}
+      >
+        {/* @ts-ignore */}
+        <prop
+          name="oldExerciseName"
+          type="string"
+          required
+          description="Name der Übung die ersetzt werden soll"
+        />
+        {/* @ts-ignore */}
+        <prop
+          name="newExerciseName"
+          type="string"
+          required
+          description="Name der neuen Übung"
         />
       </Tool>
 
@@ -1586,6 +1916,257 @@ const LiveWorkout = () => {
                 </Button>
               </Stack>
             </Box>
+
+            {/* Exercise Management Section */}
+            {workingDay && (
+              <Box
+                p={6}
+                bg="bg.secondary"
+                borderColor="blue.200"
+                borderWidth="2px"
+                rounded="lg"
+                mb={6}
+              >
+                <Stack gap={4}>
+                  <Flex justify="space-between" align="center">
+                    <Heading size="md" color="text.primary">
+                      🔧 Übungen verwalten
+                    </Heading>
+                    <Button
+                      size="sm"
+                      bg="blue.500"
+                      color="white"
+                      _hover={{ bg: "blue.600" }}
+                      onClick={() => setIsManageExercisesOpen(!isManageExercisesOpen)}
+                    >
+                      {isManageExercisesOpen ? "Schließen" : "Verwalten"}
+                    </Button>
+                  </Flex>
+
+                  {isManageExercisesOpen && (
+                    <Stack gap={4}>
+                      {/* Add New Exercise Section */}
+                      <Box
+                        p={4}
+                        bg="bg.tertiary"
+                        borderColor="green.200"
+                        borderWidth="1px"
+                        rounded="md"
+                      >
+                        <Stack gap={3}>
+                          <Flex justify="space-between" align="center">
+                            <Text fontWeight="bold" color="text.primary">
+                              ➕ Neue Übung erstellen
+                            </Text>
+                            <Button
+                              size="sm"
+                              bg="green.500"
+                              color="white"
+                              _hover={{ bg: "green.600" }}
+                              onClick={() => setIsAddingExercise(!isAddingExercise)}
+                            >
+                              {isAddingExercise ? "Abbrechen" : "Hinzufügen"}
+                            </Button>
+                          </Flex>
+
+                          {isAddingExercise && (
+                            <Stack gap={3}>
+                              <Input
+                                placeholder="Übungsname (z.B. Liegestütze)"
+                                value={newExerciseTitle}
+                                onChange={(e) => setNewExerciseTitle(e.target.value)}
+                                bg="bg"
+                              />
+                              <Input
+                                placeholder="Beschreibung (optional)"
+                                value={newExerciseDescription}
+                                onChange={(e) => setNewExerciseDescription(e.target.value)}
+                                bg="bg"
+                              />
+                              <Flex gap={2}>
+                                <Box>
+                                  <Text fontSize="sm" color="text.secondary" mb={1}>
+                                    Gewicht (kg)
+                                  </Text>
+                                  <Input
+                                    type="number"
+                                    value={newExerciseWeight}
+                                    onChange={(e) => setNewExerciseWeight(Number(e.target.value))}
+                                    bg="bg"
+                                    w="100px"
+                                  />
+                                </Box>
+                                <Box>
+                                  <Text fontSize="sm" color="text.secondary" mb={1}>
+                                    Wiederholungen
+                                  </Text>
+                                  <Input
+                                    type="number"
+                                    value={newExerciseReps}
+                                    onChange={(e) => setNewExerciseReps(Number(e.target.value))}
+                                    bg="bg"
+                                    w="100px"
+                                  />
+                                </Box>
+                              </Flex>
+                              <Button
+                                bg="green.600"
+                                color="white"
+                                _hover={{ bg: "green.700" }}
+                                onClick={createNewExercise}
+                                loading={isLoading}
+                                disabled={!newExerciseTitle.trim()}
+                              >
+                                Übung erstellen
+                              </Button>
+                            </Stack>
+                          )}
+                        </Stack>
+                      </Box>
+
+                      {/* Available Exercises to Add */}
+                      <Box
+                        p={4}
+                        bg="bg.tertiary"
+                        borderColor="blue.200"
+                        borderWidth="1px"
+                        rounded="md"
+                      >
+                        <Text fontWeight="bold" color="text.primary" mb={3}>
+                          📋 Verfügbare Übungen hinzufügen
+                        </Text>
+                        <Grid templateColumns="repeat(auto-fill, minmax(250px, 1fr))" gap={3}>
+                          {allExercises
+                            .filter(exercise => !exercises.some(ex => ex.id === exercise.id))
+                            .map((exercise) => (
+                              <Box
+                                key={exercise.id}
+                                p={3}
+                                bg="bg"
+                                borderWidth="1px"
+                                borderColor="border"
+                                rounded="md"
+                              >
+                                <Stack gap={2}>
+                                  <Text fontSize="sm" fontWeight="bold" color="text.primary">
+                                    {exercise.title}
+                                  </Text>
+                                  <Text fontSize="xs" color="text.secondary">
+                                    {exercise.first_set_weight || 0}kg • {exercise.first_set_reps || 10} Wdh.
+                                  </Text>
+                                  <Button
+                                    size="sm"
+                                    bg="blue.500"
+                                    color="white"
+                                    _hover={{ bg: "blue.600" }}
+                                    onClick={() => addExerciseToWorkingDay(exercise.id!)}
+                                  >
+                                    ➕ Hinzufügen
+                                  </Button>
+                                </Stack>
+                              </Box>
+                            ))}
+                        </Grid>
+                        {allExercises.filter(exercise => !exercises.some(ex => ex.id === exercise.id)).length === 0 && (
+                          <Text color="text.secondary" fontSize="sm" textAlign="center">
+                            Alle verfügbaren Übungen sind bereits im Training enthalten.
+                          </Text>
+                        )}
+                      </Box>
+
+                      {/* Current Exercises Management */}
+                      <Box
+                        p={4}
+                        bg="bg.tertiary"
+                        borderColor="orange.200"
+                        borderWidth="1px"
+                        rounded="md"
+                      >
+                        <Text fontWeight="bold" color="text.primary" mb={3}>
+                          🔄 Aktuelle Übungen verwalten
+                        </Text>
+                        <Stack gap={3}>
+                          {exercises.map((exercise, index) => (
+                            <Box
+                              key={exercise.id || index}
+                              p={3}
+                              bg="bg"
+                              borderWidth="1px"
+                              borderColor={index === currentExercise ? "accent.primary" : "border"}
+                              rounded="md"
+                            >
+                              <Stack gap={2}>
+                                <Flex justify="space-between" align="center">
+                                  <Stack gap={1}>
+                                    <Text fontSize="sm" fontWeight="bold" color="text.primary">
+                                      {exercise.name}
+                                    </Text>
+                                    <Text fontSize="xs" color="text.secondary">
+                                      {exercise.weight}kg • {exercise.repetitions} Wdh. • Sets: {exerciseSets[index]?.length || 0}
+                                    </Text>
+                                  </Stack>
+                                  <Stack direction="row" gap={1}>
+                                    <Button
+                                      size="sm"
+                                      bg="orange.500"
+                                      color="white"
+                                      _hover={{ bg: "orange.600" }}
+                                      onClick={() => {
+                                        const availableExercises = allExercises.filter(ex => 
+                                          !exercises.some(currentEx => currentEx.id === ex.id)
+                                        );
+                                        
+                                        if (availableExercises.length === 0) {
+                                          alert("Keine verfügbaren Übungen zum Ersetzen.");
+                                          return;
+                                        }
+
+                                        const exerciseNames = availableExercises.map((ex, idx) => 
+                                          `${idx + 1}. ${ex.title}`
+                                        ).join('\n');
+                                        
+                                        const choice = prompt(
+                                          `Wählen Sie eine Übung zum Ersetzen:\n${exerciseNames}\n\nGeben Sie die Nummer ein:`
+                                        );
+                                        
+                                        if (choice) {
+                                          const choiceIndex = parseInt(choice) - 1;
+                                          if (choiceIndex >= 0 && choiceIndex < availableExercises.length) {
+                                            const newExercise = availableExercises[choiceIndex];
+                                            if (exercise.id && newExercise.id) {
+                                              replaceExerciseInWorkingDay(exercise.id, newExercise.id);
+                                            }
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      🔄
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      bg="red.500"
+                                      color="white"
+                                      _hover={{ bg: "red.600" }}
+                                      onClick={() => {
+                                        if (exercise.id) {
+                                          removeExerciseFromWorkingDay(exercise.id);
+                                        }
+                                      }}
+                                    >
+                                      🗑️
+                                    </Button>
+                                  </Stack>
+                                </Flex>
+                              </Stack>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+            )}
           </Box>
         )}
       </Container>
