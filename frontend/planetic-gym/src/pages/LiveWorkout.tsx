@@ -1187,7 +1187,7 @@ const LiveWorkout = () => {
         name="start_workout"
         description="Starts the workout"
         onCall={handleStartWorkout}
-      />
+      ></Tool>
 
       <Tool
         name="load_working_day"
@@ -1200,7 +1200,7 @@ const LiveWorkout = () => {
           type="number"
           required
           description="ID of the training day from the database"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1213,20 +1213,20 @@ const LiveWorkout = () => {
           name="pauseTime"
           type="number"
           description="Pause time in seconds (default: 30)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
         name="stop_workout"
         description="Stops the workout completely and saves results to database"
         onCall={handleStopWorkout}
-      />
+      ></Tool>
 
       <Tool
         name="complete_set"
         description="Marks the current set as completed"
         onCall={handleCompleteSet}
-      />
+      ></Tool>
 
       <Tool
         name="complete_multiple_sets"
@@ -1239,20 +1239,20 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Number of sets to mark as completed"
-        />
+        ></prop>
       </Tool>
 
       <Tool
         name="next_exercise"
         description="Switches to the next exercise"
         onCall={handleNextExercise}
-      />
+      ></Tool>
 
       <Tool
         name="previous_exercise"
         description="Switches to the previous exercise"
         onCall={handlePreviousExercise}
-      />
+      ></Tool>
 
       <Tool
         name="update_exercise"
@@ -1265,15 +1265,15 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Index of the exercise to update (0-based)"
-        />
+        ></prop>
         {/* @ts-ignore */}
-        <prop name="weight" type="number" description="New weight in kg" />
+        <prop name="weight" type="number" description="New weight in kg" ></prop>
         {/* @ts-ignore */}
         <prop
           name="reps"
           type="number"
           description="New number of repetitions"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1287,7 +1287,7 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Index of the exercise to jump to (0-based)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1301,22 +1301,22 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Index der Übung (0-basiert)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="setIndex"
           type="number"
           required
           description="Index des Satzes (0-basiert)"
-        />
+        ></prop>
         {/* @ts-ignore */}
-        <prop name="weight" type="number" description="Neues Gewicht in kg" />
+        <prop name="weight" type="number" description="Neues Gewicht in kg" ></prop>
         {/* @ts-ignore */}
         <prop
           name="reps"
           type="number"
           description="Neue Anzahl Wiederholungen"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1330,14 +1330,14 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Index der Übung (0-basiert)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="setIndex"
           type="number"
           required
           description="Index des zu löschenden Satzes (0-basiert)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1351,19 +1351,19 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Index der Übung (0-basiert)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="weight"
           type="number"
           description="Gewicht in kg (verwendet Standard-Gewicht der Übung wenn nicht angegeben)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="reps"
           type="number"
           description="Anzahl Wiederholungen (verwendet Standard-Wiederholungen der Übung wenn nicht angegeben)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1377,26 +1377,26 @@ const LiveWorkout = () => {
           type="number"
           required
           description="Index der Übung (0-basiert)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="count"
           type="number"
           required
           description="Anzahl der Sets die hinzugefügt werden sollen"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="weight"
           type="number"
           description="Gewicht in kg (verwendet Standard-Gewicht der Übung wenn nicht angegeben)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="reps"
           type="number"
           description="Anzahl Wiederholungen (verwendet Standard-Wiederholungen der Übung wenn nicht angegeben)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1410,36 +1410,29 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name oder Teil des Namens der Übung (z.B. 'squats', 'push-ups')"
-        />
+        ></prop>
         {/* @ts-ignore */}
-        <prop
+        <array 
           name="sets"
-          type="array"
-          required
-          description="Array von Sets mit spezifischen Gewichten und Wiederholungen"
-        >
+          description="Array von Sets mit spezifischen Gewichten und Wiederholungen">
           {/* @ts-ignore */}
-          <array>
+          <dict>
             {/* @ts-ignore */}
-            <dict>
-              {/* @ts-ignore */}
-              <prop
-                name="weight"
-                type="number"
-                description="Gewicht für diesen Satz in kg"
-              />
-              {/* @ts-ignore */}
-              <prop
-                name="reps"
-                type="number"
-                description="Wiederholungen für diesen Satz"
-              />
-              {/* @ts-ignore */}
-            </dict>
+            <prop
+              name="weight"
+              type="number"
+              description="Gewicht für diesen Satz in kg"
+            ></prop>
             {/* @ts-ignore */}
-          </array>
+            <prop
+              name="reps"
+              type="number"
+              description="Wiederholungen für diesen Satz"
+            ></prop>
+            {/* @ts-ignore */}
+          </dict>
           {/* @ts-ignore */}
-        </prop>
+        </array>
       </Tool>
 
       <Tool
@@ -1453,7 +1446,7 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name oder Teil des Namens der Übung (z.B. 'squats', 'push-ups')"
-        />
+        ></prop>
       </Tool>
 
       {/* Exercise Management Tools */}
@@ -1468,25 +1461,25 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name der neuen Übung"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="description"
           type="string"
           description="Beschreibung der Übung (optional)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="weight"
           type="number"
           description="Standard-Gewicht in kg (optional, Standard: 0)"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="reps"
           type="number"
           description="Standard-Wiederholungen (optional, Standard: 10)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1500,7 +1493,7 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name oder Teil des Namens der Übung die hinzugefügt werden soll"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1514,7 +1507,7 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name oder Teil des Namens der Übung die entfernt werden soll"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1528,14 +1521,14 @@ const LiveWorkout = () => {
           type="string"
           required
           description="Name der Übung die ersetzt werden soll"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="newExerciseName"
           type="string"
           required
           description="Name der neuen Übung"
-        />
+        ></prop>
       </Tool>
 
       {/* Training Selection Tools */}
@@ -1549,26 +1542,26 @@ const LiveWorkout = () => {
           name="planName"
           type="string"
           description="Name oder Teil des Namens des Trainingsplans (z.B. 'Push Pull', 'Ganzkörper')"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="dayName"
           type="string"
           description="Name oder Teil des Namens des Trainingstages (z.B. 'Push Day', 'Brust Training')"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="dayNumber"
           type="number"
           description="Nummer des Trainingstages im Plan (z.B. 1, 2, 3)"
-        />
+        ></prop>
       </Tool>
 
       <Tool
         name="open_training_selection"
         description="Öffnet das Trainingsauswahl-Menü"
         onCall={handleOpenTrainingSelection}
-      />
+      ></Tool>
 
       <Tool
         name="list_available_trainings"
@@ -1580,7 +1573,7 @@ const LiveWorkout = () => {
           name="planName"
           type="string"
           description="Name des Plans um nur dessen Tage anzuzeigen (optional)"
-        />
+        ></prop>
       </Tool>
 
       <Container maxW="6xl">

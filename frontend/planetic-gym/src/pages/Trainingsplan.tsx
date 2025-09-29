@@ -797,21 +797,18 @@ const Trainingsplan = () => {
           type="string"
           required
           description="Name of the training plan"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="description"
           type="string"
           description="Description of the training plan"
-        />
+        ></prop>
         {/* @ts-ignore */}
-        <prop
+        <array
           name="days"
-          type="array"
           description="List of training days with exercises"
         >
-          {/* @ts-ignore */}
-          <array>
             {/* @ts-ignore */}
             <dict>
               {/* @ts-ignore */}
@@ -820,56 +817,48 @@ const Trainingsplan = () => {
                 type="string"
                 required
                 description="Name of the training day"
-              />
+              ></prop>
               {/* @ts-ignore */}
               <prop
                 name="focus"
                 type="string"
                 required
                 description="Focus of the training day (e.g. Upper Body, Lower Body, Full Body)"
-              />
-              {/* @ts-ignore */}
-              <prop
-                name="exercises"
-                type="array"
-                description="List of exercises for this day"
-              >
+              ></prop>
                 {/* @ts-ignore */}
-                <array>
+                <array
+                  name="exercises"
+                  description="List of exercises for this day"
+                >
                   {/* @ts-ignore */}
                   <dict>
                     {/* @ts-ignore */}
                     <prop
                       name="name"
                       type="string"
-                      required
                       description="Name of the exercise"
-                    />
+                    ></prop>
                     {/* @ts-ignore */}
                     <prop
                       name="repetitions"
                       type="number"
                       required
                       description="Number of repetitions"
-                    />
+                    ></prop>
                     {/* @ts-ignore */}
                     <prop
                       name="weight"
                       type="number"
                       description="Weight in kg (default: 0)"
-                    />
+                    ></prop>
                     {/* @ts-ignore */}
                   </dict>
                   {/* @ts-ignore */}
                 </array>
-                {/* @ts-ignore */}
-              </prop>
               {/* @ts-ignore */}
             </dict>
             {/* @ts-ignore */}
           </array>
-          {/* @ts-ignore */}
-        </prop>
       </Tool>
 
       <Tool
@@ -883,13 +872,13 @@ const Trainingsplan = () => {
           type="string"
           required
           description="Name of the new training week"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="description"
           type="string"
           description="Description of the training week"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -903,25 +892,23 @@ const Trainingsplan = () => {
           type="string"
           required
           description="ID of the week to which the day should be added"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           required
           description="Name of the training day"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="focus"
           type="string"
           required
           description="Training focus (e.g. upper body, lower body, full body)"
-        />
-        {/* @ts-ignore */}
-        <prop name="exercises" type="array" description="List of exercises">
+        ></prop>
           {/* @ts-ignore */}
-          <array>
+          <array name="exercises" description="List of exercises">
             {/* @ts-ignore */}
             <dict>
               {/* @ts-ignore */}
@@ -930,26 +917,24 @@ const Trainingsplan = () => {
                 type="string"
                 required
                 description="Name of the exercise"
-              />
+              ></prop>
               {/* @ts-ignore */}
               <prop
                 name="repetitions"
                 type="number"
                 required
                 description="Number of repetitions"
-              />
+              ></prop>
               {/* @ts-ignore */}
               <prop
                 name="weight"
                 type="number"
                 description="Weight in kg (default: 0)"
-              />
+              ></prop>
               {/* @ts-ignore */}
             </dict>
             {/* @ts-ignore */}
           </array>
-          {/* @ts-ignore */}
-        </prop>
       </Tool>
 
       <Tool
@@ -963,43 +948,38 @@ const Trainingsplan = () => {
           type="string"
           required
           description="ID of the training day to be edited"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           description="New name of the training day"
-        />
+        ></prop>
         {/* @ts-ignore */}
-        <prop name="focus" type="string" description="New training focus" />
+        <prop name="focus" type="string" description="New training focus" ></prop>
         {/* @ts-ignore */}
-        <prop name="exercises" type="array" description="New list of exercises">
+        <array name="exercises" description="New list of exercises">
           {/* @ts-ignore */}
-          <array>
+          <dict>
             {/* @ts-ignore */}
-            <dict>
-              {/* @ts-ignore */}
-              <prop
-                name="name"
-                type="string"
-                required
-                description="Name of the exercise"
-              />
-              {/* @ts-ignore */}
-              <prop
-                name="repetitions"
-                type="number"
-                required
-                description="Number of repetitions"
-              />
-              {/* @ts-ignore */}
-              <prop name="weight" type="number" description="Weight in kg" />
-              {/* @ts-ignore */}
-            </dict>
+            <prop
+              name="name"
+              type="string"
+              description="Name of the exercise"
+            ></prop>
             {/* @ts-ignore */}
-          </array>
+            <prop
+              name="repetitions"
+              type="number"
+              required
+              description="Number of repetitions"
+            ></prop>
+            {/* @ts-ignore */}
+            <prop name="weight" type="number" description="Weight in kg" ></prop>
+            {/* @ts-ignore */}
+          </dict>
           {/* @ts-ignore */}
-        </prop>
+        </array>
       </Tool>
 
       <Tool
@@ -1013,7 +993,7 @@ const Trainingsplan = () => {
           type="string"
           required
           description="ID of the training day to be deleted"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1027,7 +1007,7 @@ const Trainingsplan = () => {
           type="string"
           required
           description="ID of the training week to be deleted"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1041,19 +1021,19 @@ const Trainingsplan = () => {
           type="string"
           required
           description="ID of the training week to be edited"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="name"
           type="string"
           description="New name of the training week"
-        />
+        ></prop>
         {/* @ts-ignore */}
         <prop
           name="description"
           type="string"
           description="New description of the training week"
-        />
+        ></prop>
       </Tool>
 
       <Tool
@@ -1067,7 +1047,7 @@ const Trainingsplan = () => {
           type="string"
           required
           description="ID des Trainingstages der exportiert werden soll"
-        />
+        ></prop>
       </Tool>
 
       <Container maxW="6xl">
